@@ -61,14 +61,18 @@ jobs:
             python main.py solve -c "$COUNT"
           fi
 
+      - name: Build Web Dashboard Data
+        run: |
+          python build_dashboard.py
+
       - name: Commit and Push Solutions & Progress
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add solutions/ progress.json
+          git add solutions/ progress.json docs/
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Auto-solve: NeetCode 250 solved update [skip ci]"
+            git commit -m "Auto-solve: NeetCode 250 solved update & dashboard refresh [skip ci]"
             git push
           fi
