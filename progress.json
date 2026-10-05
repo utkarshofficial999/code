@@ -1,0 +1,79 @@
+{
+  "solved": {
+    "concatenation-of-array": {
+      "slug": "concatenation-of-array",
+      "name": "Concatenation of Array",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T16:27:53.754296",
+      "status": "Accepted",
+      "submission_id": 2163039653,
+      "runtime": "0 ms",
+      "memory": "16.8 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\1929_concatenation-of-array.cpp"
+    },
+    "contains-duplicate": {
+      "slug": "contains-duplicate",
+      "name": "Contains Duplicate",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T16:28:26.725964",
+      "status": "Accepted",
+      "submission_id": 2163040086,
+      "runtime": "79 ms",
+      "memory": "107.7 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\217_contains-duplicate.cpp"
+    },
+    "valid-anagram": {
+      "slug": "valid-anagram",
+      "name": "Valid Anagram",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T16:28:34.158263",
+      "status": "Accepted",
+      "submission_id": 2163040196,
+      "runtime": "0 ms",
+      "memory": "9.5 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\242_valid-anagram.cpp"
+    },
+    "two-sum": {
+      "slug": "two-sum",
+      "name": "Two Sum",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T20:59:04.576665",
+      "status": "Accepted",
+      "submission_id": 2163278269,
+      "runtime": "0 ms",
+      "memory": "15.8 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\001_two-sum.cpp"
+    },
+    "longest-common-prefix": {
+      "slug": "longest-common-prefix",
+      "name": "Longest Common Prefix",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T21:28:26.254061",
+      "status": "Accepted",
+      "submission_id": 2163309617,
+      "runtime": "0 ms",
+      "memory": "11.7 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\014_longest-common-prefix.cpp"
+    },
+    "group-anagrams": {
+      "slug": "group-anagrams",
+      "name": "Group Anagrams",
+      "category": "Arrays & Hashing",
+      "difficulty": "Medium",
+      "solved_at": "2026-10-05T21:43:37.597194",
+      "status": "Accepted",
+      "submission_id": 2163327088,
+      "runtime": "35 ms",
+      "memory": "28.2 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\049_group-anagrams.cpp"
+    }
+  },
+  "history": [],
+  "created_at": "2026-10-05T16:27:47.539116",
+  "last_updated": "2026-10-05T21:43:37.597215"
+}

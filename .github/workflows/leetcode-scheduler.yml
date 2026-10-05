@@ -1,0 +1,74 @@
+name: LeetCode NeetCode 250 Cloud Auto-Solver
+
+on:
+  schedule:
+    # Runs 3 times a day automatically:
+    # 09:00 AM IST -> 03:30 UTC
+    # 03:00 PM IST -> 09:30 UTC
+    # 09:00 PM IST -> 15:30 UTC
+    - cron: '30 3,9,15 * * *'
+
+  # Allows manual triggers anytime from GitHub web UI or GitHub Mobile app
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'Number of questions to solve (default: 1)'
+        required: true
+        default: '1'
+      topic:
+        description: 'Target specific topic (leave empty for auto next)'
+        required: false
+        default: ''
+
+jobs:
+  solve-and-submit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Solve Next DSA Problem & Submit
+        env:
+          LEETCODE_SESSION: ${{ secrets.LEETCODE_SESSION }}
+          LEETCODE_CSRFTOKEN: ${{ secrets.LEETCODE_CSRFTOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ secrets.GROQ_MODEL || 'openai/gpt-oss-120b' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          COUNT="${{ github.event.inputs.count || '1' }}"
+          TOPIC="${{ github.event.inputs.topic || '' }}"
+          if [ -n "$TOPIC" ]; then
+            python main.py solve -c "$COUNT" -t "$TOPIC"
+          else
+            python main.py solve -c "$COUNT"
+          fi
+
+      - name: Commit and Push Solutions & Progress
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add solutions/ progress.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-solve: NeetCode 250 solved update [skip ci]"
+            git push
+          fi
