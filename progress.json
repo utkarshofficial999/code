@@ -71,9 +71,21 @@
       "runtime": "35 ms",
       "memory": "28.2 MB",
       "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\049_group-anagrams.cpp"
+    },
+    "remove-element": {
+      "slug": "remove-element",
+      "name": "Remove Element",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-05T16:24:13.151512",
+      "status": "Accepted",
+      "submission_id": 2163339784,
+      "runtime": "0 ms",
+      "memory": "11.6 MB",
+      "solution_path": "/home/runner/work/code/code/solutions/arrays_and_hashing/027_remove-element.cpp"
     }
   },
   "history": [],
   "created_at": "2026-10-05T16:27:47.539116",
-  "last_updated": "2026-10-05T21:43:37.597215"
+  "last_updated": "2026-10-05T16:24:13.151521"
 }
