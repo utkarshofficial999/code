@@ -1,20 +1,20 @@
 {
   "summary": {
     "total_problems": 250,
-    "total_solved": 8,
-    "overall_percent": 3.2,
-    "easy_solved": 7,
+    "total_solved": 9,
+    "overall_percent": 3.6,
+    "easy_solved": 8,
     "medium_solved": 1,
     "hard_solved": 0,
-    "remaining": 242,
-    "last_updated": "2026-10-06 15:53:02 IST"
+    "remaining": 241,
+    "last_updated": "2026-10-06 17:39:44 IST"
   },
   "categories": [
     {
       "name": "Arrays & Hashing",
       "total": 22,
-      "solved": 8,
-      "percent": 36.4,
+      "solved": 9,
+      "percent": 40.9,
       "problems": [
         {
           "name": "Concatenation of Array",
@@ -76,7 +76,7 @@
           "name": "Design HashSet",
           "slug": "design-hashset",
           "difficulty": "Easy",
-          "solved": false,
+          "solved": true,
           "leetcode_url": "https://leetcode.com/problems/design-hashset/"
         },
         {
@@ -1906,6 +1906,24 @@
     }
   ],
   "solutions": [
+    {
+      "slug": "design-hashset",
+      "name": "Design HashSet",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-06T17:39:40.035630",
+      "status": "Accepted",
+      "runtime": "15 ms",
+      "memory": "49.7 MB",
+      "submission_id": 2164198292,
+      "leetcode_url": "https://leetcode.com/problems/design-hashset/",
+      "neetcode_url": "https://neetcode.io/problems/design-hashset?list=neetcode250",
+      "intuition": "Because the key range is bounded (`0 ≤ key ≤ 10⁶`) we can store the presence of each possible key directly in an array‑like structure. A simple boolean vector gives O(1) time for every operation and uses only about 1 MiB of memory, which easily satisfies the limits.\n",
+      "approach": "1. **Data structure** – Create a `std::vector<bool> present` of size `MAX_KEY + 1` (`MAX_KEY = 1'000'000`).\n`present[x]` is `true` iff `x` has been added and not removed.\n2. **add(key)** – Set `present[key] = true`.\n3. **remove(key)** – Set `present[key] = false`. (If the key was never added the value stays `false`.)\n4. **contains(key)** – Return the value of `present[key]`.\n\nAll operations are direct array accesses, therefore constant time.\n",
+      "time_complexity": "O(1) for add, remove, and contains.",
+      "space_complexity": "O(MAX_KEY) → O(10⁶) ≈ 1 MiB.",
+      "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <vector>\n\n/*\n * Design a HashSet without using any built‑in hash table libraries.\n * The key range is 0 … 1,000,000, so a simple boolean vector is sufficient.\n class MyHashSet {\nprivate:\n    static constexpr int MAX_KEY = 1'000'000;          // inclusive upper bound\n    std::vector<bool> present;                         // presence flag for each key\n\npublic:\n    /** Initialize your data structure here.     MyHashSet() : present(MAX_KEY + 1, false) {}\n\n    /** Inserts the value key into the HashSet.     void add(int key) {\n        // Guard against out‑of‑range keys (defensive programming)\n        if (key < 0 || key > MAX_KEY) return;\n        present[key] = true;\n    }\n\n    /** Removes the value key from the HashSet.     void remove(int key) {\n        if (key < 0 || key > MAX_KEY) return;\n        present[key] = false;\n    }\n\n    /** Returns true if this set contains the specified element.     bool contains(int key) {\n        if (key < 0 || key > MAX_KEY) return false;\n        return present[key];\n    }\n};\n\n/*\n * Your MyHashSet object will be instantiated and called as such:\n * MyHashSet* obj = new MyHashSet();\n * obj->add(key);\n * obj->remove(key);\n * bool param_3 = obj->contains(key);"
+    },
     {
       "slug": "majority-element",
       "name": "Majority Element",
