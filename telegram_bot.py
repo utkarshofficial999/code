@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import requests
 import json
@@ -6,6 +7,7 @@ import logging
 import html
 import re
 import threading
+import subprocess
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -21,8 +23,11 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, BASE_DIR, ENV_PATH
 from agent import LeetCodeAgent
 from roadmap import RoadmapManager
 from tracker import ProgressTracker
+from build_dashboard import build_data
 
 API_BASE = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+DASHBOARD_URL = "https://utkarshofficial999.github.io/code/"
+
 
 def save_chat_id(chat_id: str):
     """Saves chat_id to .env file so it persists."""
@@ -38,7 +43,33 @@ def save_chat_id(chat_id: str):
     except Exception as e:
         print(f"[Telegram] Failed to save chat_id: {e}")
 
-def send_telegram_message(text: str, chat_id: Optional[str] = None, parse_mode: str = "HTML", reply_markup: Optional[Dict] = None) -> bool:
+
+def git_commit_and_push(commit_msg: str) -> bool:
+    """Stages solutions, progress, and docs, commits and pushes to origin."""
+    try:
+        subprocess.run(["git", "add", "solutions/", "progress.json", "docs/"], cwd=str(BASE_DIR), check=True)
+        status_res = subprocess.run(["git", "diff", "--staged", "--quiet"], cwd=str(BASE_DIR))
+        if status_res.returncode == 0:
+            return True
+        subprocess.run(["git", "commit", "-m", commit_msg], cwd=str(BASE_DIR), check=True)
+        push_res = subprocess.run(
+            ["git", "push", "origin", "main"],
+            cwd=str(BASE_DIR),
+            capture_output=True,
+            text=True
+        )
+        return push_res.returncode == 0
+    except Exception as e:
+        print(f"[Telegram] Git commit/push error: {e}")
+        return False
+
+
+def send_telegram_message(
+    text: str,
+    chat_id: Optional[str] = None,
+    parse_mode: str = "HTML",
+    reply_markup: Optional[Dict] = None
+) -> bool:
     target_id = chat_id or TELEGRAM_CHAT_ID
     if not TELEGRAM_BOT_TOKEN or not target_id:
         return False
@@ -52,24 +83,26 @@ def send_telegram_message(text: str, chat_id: Optional[str] = None, parse_mode: 
         payload["reply_markup"] = reply_markup
 
     try:
-        resp = requests.post(f"{API_BASE}/sendMessage", json=payload, timeout=15)
+        resp = requests.post(f"{API_BASE}/sendMessage", json=payload, timeout=20)
         if resp.status_code != 200 and parse_mode:
             # Fallback to plain text if HTML entity parsing failed
             payload.pop("parse_mode", None)
-            resp = requests.post(f"{API_BASE}/sendMessage", json=payload, timeout=15)
+            resp = requests.post(f"{API_BASE}/sendMessage", json=payload, timeout=20)
         return resp.status_code == 200
     except Exception as e:
         print(f"[Telegram] Send message error: {e}")
         return False
 
+
 def get_keyboard():
     return {
         "keyboard": [
             [{"text": "🚀 Solve Next Problem"}, {"text": "📊 Progress Status"}],
-            [{"text": "📚 NeetCode Topics"}, {"text": "❓ Help"}]
+            [{"text": "📚 NeetCode Topics"}, {"text": "🌐 Dashboard"}, {"text": "❓ Help"}]
         ],
         "resize_keyboard": True
     }
+
 
 def send_full_problem_solution(res: Dict[str, Any], chat_id: Optional[str] = None):
     """
@@ -170,9 +203,10 @@ class TelegramBotService:
             f"👋 <b>Welcome, {html.escape(first_name)}!</b>\n\n"
             f"I am your personal <b>LeetCode NeetCode 250 DSA Agent</b>.\n\n"
             f"🎯 <b>What I do:</b>\n"
-            f"• Solve questions topic-wise according to the NeetCode 250 sheet\n"
-            f"• Write optimal C++ solutions with Big-O complexity analysis\n"
-            f"• Automatically submit solutions to your LeetCode profile\n\n"
+            f"• Pick the next unsolved question topic-wise from the NeetCode 250 sheet\n"
+            f"• Generate optimal C++ solutions with Big-O complexity analysis\n"
+            f"• Submit live to your LeetCode profile\n"
+            f"• Refresh your GitHub Pages live dashboard & push commits to GitHub\n\n"
             f"👇 <b>Tap a button below or send a command to start:</b>"
         )
         send_telegram_message(welcome_msg, chat_id=chat_id, reply_markup=get_keyboard())
@@ -185,7 +219,7 @@ class TelegramBotService:
         pct = stats["overall_percent"]
 
         # Find current active topic
-        active_cat = "Completed!"
+        active_cat = "All Topics Completed!"
         cat_progress = ""
         for cat, data in stats["categories"].items():
             if data["solved"] < data["total"]:
@@ -204,14 +238,23 @@ class TelegramBotService:
             f"⏳ Remaining: <b>{total - solved}</b>\n\n"
             f"🎯 <b>Current Active Topic:</b>\n"
             f"<b>{active_cat}</b>: {cat_progress}\n\n"
-            f"🕒 <b>Recent Submissions:</b>{recent_text or ' None yet'}"
+            f"🕒 <b>Recent Submissions:</b>{recent_text or ' None yet'}\n\n"
+            f"🌐 <a href='{DASHBOARD_URL}'>Open Live Web Dashboard</a>"
+        )
+        send_telegram_message(msg, chat_id=chat_id, reply_markup=get_keyboard())
+
+    def handle_dashboard(self, chat_id: str):
+        msg = (
+            f"🌐 <b>Live Project Dashboard</b>\n\n"
+            f"View your live roadmap progression, solved problem modals, code, and CI/CD stats here:\n"
+            f"👉 <a href='{DASHBOARD_URL}'>{DASHBOARD_URL}</a>"
         )
         send_telegram_message(msg, chat_id=chat_id, reply_markup=get_keyboard())
 
     def handle_topics(self, chat_id: str):
         solved_slugs = self.tracker.get_solved_slugs()
         categories = self.roadmap.get_all_categories()
-        
+
         lines = ["📚 <b>NeetCode 250 Roadmap Topics:</b>\n"]
         for idx, cat in enumerate(categories, 1):
             probs = self.roadmap.get_problems_by_category(cat)
@@ -248,8 +291,30 @@ class TelegramBotService:
                     )
                     return
 
+                # Send educational solution breakdown and C++ code
                 for res in results:
                     send_full_problem_solution(res, chat_id=chat_id)
+
+                # 1. Rebuild web dashboard data
+                try:
+                    build_data()
+                except Exception as b_err:
+                    print(f"[Telegram] Dashboard rebuild error: {b_err}")
+
+                # 2. Git Commit & Push
+                solved_names = ", ".join([r.get("name", "Problem") for r in results if r.get("success")])
+                if not solved_names:
+                    solved_names = results[0].get("name", "NeetCode Problem")
+                commit_msg = f"Auto-solve: {solved_names} solved via Telegram & dashboard refresh"
+                pushed = git_commit_and_push(commit_msg)
+
+                # 3. Send Completion Confirmation
+                confirm_msg = (
+                    f"✅ <b>Solve Cycle Complete!</b>\n"
+                    f"📦 {'Pushed to GitHub main branch' if pushed else 'Saved locally'}\n"
+                    f"🌐 <a href='{DASHBOARD_URL}'>View Live Dashboard</a>"
+                )
+                send_telegram_message(confirm_msg, chat_id=chat_id, reply_markup=get_keyboard())
 
             except Exception as e:
                 send_telegram_message(
@@ -265,8 +330,8 @@ class TelegramBotService:
         thread.start()
 
     def start_polling(self):
-        print(f"[Telegram] Bot listener started. Send /start to your bot: https://t.me/leetcdebot")
-        
+        print(f"[Telegram] Bot listener active. Connected to: https://t.me/leetcdebot")
+
         while True:
             try:
                 resp = requests.get(
@@ -303,6 +368,8 @@ class TelegramBotService:
                         self.handle_start(chat_id, first_name)
                     elif text_lower in ("/status", "status") or "progress status" in text_lower:
                         self.handle_status(chat_id)
+                    elif text_lower in ("/dashboard", "dashboard") or "dashboard" in text_lower:
+                        self.handle_dashboard(chat_id)
                     elif text_lower in ("/topics", "topics") or "neetcode topics" in text_lower:
                         self.handle_topics(chat_id)
                     elif text_lower.startswith("/solve") or "solve next problem" in text_lower:
@@ -318,12 +385,13 @@ class TelegramBotService:
                             "🚀 /solve 3 - Solve & submit next 3 questions\n"
                             "📊 /status - View progress & streak\n"
                             "📚 /topics - View all 18 NeetCode topics\n"
+                            "🌐 /dashboard - Get link to live web dashboard\n"
                             "❓ /help - Show this menu"
                         )
                         send_telegram_message(help_text, chat_id=chat_id, reply_markup=get_keyboard())
                     else:
                         send_telegram_message(
-                            "I didn't recognize that command. Tap <b>🚀 Solve Next Problem</b> or <b>📊 Progress Status</b> below!",
+                            "Tap <b>🚀 Solve Next Problem</b>, <b>📊 Progress Status</b>, or <b>🌐 Dashboard</b> below!",
                             chat_id=chat_id,
                             reply_markup=get_keyboard()
                         )
@@ -331,6 +399,30 @@ class TelegramBotService:
             except Exception as e:
                 time.sleep(3)
 
+
+def acquire_single_instance_lock(port: int = 49250):
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", port))
+        s.listen(1)
+        return s
+    except socket.error:
+        print("[Telegram] Another instance of Telegram Bot is already running. Exiting.")
+        sys.exit(0)
+
+
 if __name__ == "__main__":
+    from config import LOGS_DIR
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    bot_log = LOGS_DIR / "telegram_bot.log"
+    logging.basicConfig(
+        filename=str(bot_log),
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    _lock_sock = acquire_single_instance_lock()
     bot = TelegramBotService()
     bot.start_polling()
+
