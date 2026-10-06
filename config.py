@@ -40,8 +40,8 @@ SOLUTION_LANG = "cpp"
 SOLUTION_LANG_SLUG = "cpp"
 
 # Schedule Configuration
-# 3 runs per day at different times (e.g. 09:00 morning, 15:45 afternoon, 21:00 evening)
-SCHEDULE_TIMES_RAW = os.getenv("SCHEDULE_TIMES", "09:00,15:45,21:00")
+# 3 runs per day at different times (e.g. 09:00 morning, 15:45 afternoon, 16:15 evening)
+SCHEDULE_TIMES_RAW = os.getenv("SCHEDULE_TIMES", "09:00,15:45,16:15")
 SCHEDULE_TIMES = [t.strip() for t in SCHEDULE_TIMES_RAW.split(",") if t.strip()]
 
 # How many questions to solve per scheduled trigger

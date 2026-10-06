@@ -7,8 +7,8 @@ on:
     - cron: '30 3 * * *'
     # 03:45 PM IST -> 10:15 UTC
     - cron: '15 10 * * *'
-    # 09:00 PM IST -> 15:30 UTC
-    - cron: '30 15 * * *'
+    # 04:15 PM IST -> 10:45 UTC
+    - cron: '45 10 * * *'
 
   # Allows manual triggers anytime from GitHub web UI or GitHub Mobile app
   workflow_dispatch:
