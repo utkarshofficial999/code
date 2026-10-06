@@ -1,20 +1,20 @@
 {
   "summary": {
     "total_problems": 250,
-    "total_solved": 12,
-    "overall_percent": 4.8,
+    "total_solved": 13,
+    "overall_percent": 5.2,
     "easy_solved": 9,
-    "medium_solved": 3,
+    "medium_solved": 4,
     "hard_solved": 0,
-    "remaining": 238,
-    "last_updated": "2026-10-06 16:50:25 IST"
+    "remaining": 237,
+    "last_updated": "2026-10-06 16:57:11 IST"
   },
   "categories": [
     {
       "name": "Arrays & Hashing",
       "total": 22,
-      "solved": 12,
-      "percent": 54.5,
+      "solved": 13,
+      "percent": 59.1,
       "problems": [
         {
           "name": "Concatenation of Array",
@@ -104,7 +104,7 @@
           "name": "Top K Frequent Elements",
           "slug": "top-k-frequent-elements",
           "difficulty": "Medium",
-          "solved": false,
+          "solved": true,
           "leetcode_url": "https://leetcode.com/problems/top-k-frequent-elements/"
         },
         {
@@ -1959,6 +1959,24 @@
       "time_complexity": "O(1) for add, remove, and contains.",
       "space_complexity": "O(MAX_KEY) → O(10⁶) ≈ 1 MiB.",
       "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <vector>\n\n/*\n * Design a HashSet without using any built‑in hash table libraries.\n * The key range is 0 … 1,000,000, so a simple boolean vector is sufficient.\n class MyHashSet {\nprivate:\n    static constexpr int MAX_KEY = 1'000'000;          // inclusive upper bound\n    std::vector<bool> present;                         // presence flag for each key\n\npublic:\n    /** Initialize your data structure here.     MyHashSet() : present(MAX_KEY + 1, false) {}\n\n    /** Inserts the value key into the HashSet.     void add(int key) {\n        // Guard against out‑of‑range keys (defensive programming)\n        if (key < 0 || key > MAX_KEY) return;\n        present[key] = true;\n    }\n\n    /** Removes the value key from the HashSet.     void remove(int key) {\n        if (key < 0 || key > MAX_KEY) return;\n        present[key] = false;\n    }\n\n    /** Returns true if this set contains the specified element.     bool contains(int key) {\n        if (key < 0 || key > MAX_KEY) return false;\n        return present[key];\n    }\n};\n\n/*\n * Your MyHashSet object will be instantiated and called as such:\n * MyHashSet* obj = new MyHashSet();\n * obj->add(key);\n * obj->remove(key);\n * bool param_3 = obj->contains(key);"
+    },
+    {
+      "slug": "top-k-frequent-elements",
+      "name": "Top K Frequent Elements",
+      "category": "Arrays & Hashing",
+      "difficulty": "Medium",
+      "solved_at": "2026-10-06T16:57:09.860714",
+      "status": "Accepted",
+      "runtime": "4 ms",
+      "memory": "21.5 MB",
+      "submission_id": 2164493302,
+      "leetcode_url": "https://leetcode.com/problems/top-k-frequent-elements/",
+      "neetcode_url": "https://neetcode.io/problems/top-k-frequent-elements?list=neetcode250",
+      "intuition": "The frequency of each distinct number is at most `n`. By placing numbers into “buckets” indexed by their frequency we can retrieve the most frequent elements without any sorting, achieving linear time.\n",
+      "approach": "1. **Count frequencies** – traverse `nums` once and store `freq[x]` in an `unordered_map`.\n2. **Bucket by frequency** – create a vector of vectors `buckets` of size `n+1`; for each `(value, cnt)` push `value` into `buckets[cnt]`.\n3. **Collect answer** – iterate `buckets` from high frequency down to `1`, appending elements to the result until `k` elements have been taken.\n4. Return the result vector.\n",
+      "time_complexity": "O(n) – one pass for counting, one pass for bucketing, and at most n elements scanned while collecting the answer.",
+      "space_complexity": "O(n) – hash map for frequencies and the bucket array (total size ≤ n + number_of_unique_elements).",
+      "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <vector>\n#include <unordered_map>\n#include <algorithm>\n\nclass Solution {\npublic:\n    std::vector<int> topKFrequent(std::vector<int>& nums, int k) {\n        // 1. Count frequencies\n        std::unordered_map<int, int> freq;\n        freq.reserve(nums.size() * 2);\n        for (int x : nums) {\n            ++freq[x];\n        }\n\n        // 2. Bucket by frequency (max frequency is nums.size())\n        int n = nums.size();\n        std::vector<std::vector<int>> buckets(n + 1);\n        for (const auto& p : freq) {\n            buckets[p.second].push_back(p.first);\n        }\n\n        // 3. Gather the top k frequent elements\n        std::vector<int> ans;\n        ans.reserve(k);\n        for (int f = n; f >= 1 && ans.size() < static_cast<size_t>(k); --f) {\n            for (int val : buckets[f]) {\n                ans.push_back(val);\n                if (ans.size() == static_cast<size_t>(k))\n                    break;\n            }\n        }\n        return ans;\n    }\n};"
     },
     {
       "slug": "sort-colors",
