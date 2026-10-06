@@ -1,20 +1,20 @@
 {
   "summary": {
     "total_problems": 250,
-    "total_solved": 10,
-    "overall_percent": 4.0,
+    "total_solved": 11,
+    "overall_percent": 4.4,
     "easy_solved": 9,
-    "medium_solved": 1,
+    "medium_solved": 2,
     "hard_solved": 0,
-    "remaining": 240,
-    "last_updated": "2026-10-06 18:21:24 IST"
+    "remaining": 239,
+    "last_updated": "2026-10-06 21:56:36 IST"
   },
   "categories": [
     {
       "name": "Arrays & Hashing",
       "total": 22,
-      "solved": 10,
-      "percent": 45.5,
+      "solved": 11,
+      "percent": 50.0,
       "problems": [
         {
           "name": "Concatenation of Array",
@@ -90,7 +90,7 @@
           "name": "Sort an Array",
           "slug": "sort-an-array",
           "difficulty": "Medium",
-          "solved": false,
+          "solved": true,
           "leetcode_url": "https://leetcode.com/problems/sort-an-array/"
         },
         {
@@ -1906,6 +1906,24 @@
     }
   ],
   "solutions": [
+    {
+      "slug": "sort-an-array",
+      "name": "Sort an Array",
+      "category": "Arrays & Hashing",
+      "difficulty": "Medium",
+      "solved_at": "2026-10-06T21:56:33.610957",
+      "status": "Accepted",
+      "runtime": "1481 ms",
+      "memory": "70.9 MB",
+      "submission_id": 2164454905,
+      "leetcode_url": "https://leetcode.com/problems/sort-an-array/",
+      "neetcode_url": "https://neetcode.io/problems/sort-an-array?list=neetcode250",
+      "intuition": "The only requirement is to reorder the elements into non‑decreasing order without calling any library sorting routine.  An in‑place quick‑sort with a random pivot gives the desired average **O(n log n)** running time while using only **O(log n)** auxiliary stack space (the recursion depth).\n",
+      "approach": "1. **Randomised partition** – pick a pivot uniformly at random, swap it to the end and partition the range `[l, r]` so that all elements `< pivot` are on the left and the rest on the right.\n2. **Recursive quick‑sort** – recursively sort the left part `[l, p‑1]` and the right part `[p+1, r]`.\n3. **Tail‑call optimisation** – always recurse on the smaller sub‑range first and iterate on the larger one. This guarantees that the recursion depth never exceeds `O(log n)`.\n4. The algorithm works for any integer values, including negatives, and needs no extra containers.\n",
+      "time_complexity": "Average O(n log n) (randomised pivot prevents the pathological O(n²) case).",
+      "space_complexity": "O(log n) auxiliary stack space due to recursion depth; the array itself is sorted in‑place.",
+      "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <bits/stdc++.h>\nusing namespace std;\n\nclass Solution {\npublic:\n    // public entry point\n    vector<int> sortArray(vector<int>& nums) {\n        quickSort(nums, 0, static_cast<int>(nums.size()) - 1);\n        return nums;\n    }\n\nprivate:\n    // random number generator for pivot selection\n    static int randomPivot(int l, int r) {\n        static std::mt19937 rng(\n            (unsigned)chrono::steady_clock::now().time_since_epoch().count());\n        std::uniform_int_distribution<int> dist(l, r);\n        return dist(rng);\n    }\n\n    // partition using Lomuto scheme\n    static int partition(vector<int>& a, int l, int r) {\n        int pivotIdx = randomPivot(l, r);\n        swap(a[pivotIdx], a[r]);               // move pivot to end\n        int pivot = a[r];\n        int i = l;                              // place for next smaller element\n        for (int j = l; j < r; ++j) {\n            if (a[j] < pivot) {\n                swap(a[i], a[j]);\n                ++i;\n            }\n        }\n        swap(a[i], a[r]);                       // put pivot into its final place\n        return i;\n    }\n\n    // in‑place quick‑sort with tail‑recursion elimination\n    static void quickSort(vector<int>& a, int l, int r) {\n        while (l < r) {\n            int p = partition(a, l, r);\n            // Recurse on the smaller side first to keep stack depth O(log n)\n            if (p - l < r - p) {\n                quickSort(a, l, p - 1);\n                l = p + 1;          // iterate on the larger right part\n            } else {\n                quickSort(a, p + 1, r);\n                r = p - 1;          // iterate on the larger left part\n            }\n        }\n    }\n};"
+    },
     {
       "slug": "design-hashmap",
       "name": "Design HashMap",
