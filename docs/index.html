@@ -805,6 +805,18 @@
 
       if (globalData) {
         renderDashboard(globalData);
+      } else {
+        const spotlight = document.getElementById('spotlight-container');
+        if (spotlight) {
+          spotlight.innerHTML = `
+            <div style="text-align: center; padding: 30px 10px;">
+              <p style="font-size: 1.1rem; color: var(--text-main); font-weight: 600;">Data Sync In Progress</p>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px;">
+                The cloud solver data is currently syncing or loading. Refresh in a few moments.
+              </p>
+            </div>
+          `;
+        }
       }
     }
 
@@ -897,7 +909,7 @@
         <div class="code-container">
           <div class="code-topbar">
             <span>Optimal C++ Solution</span>
-            <button class="copy-btn" onclick="copyCode(this, \`spotlight-code\`)">Copy Code</button>
+            <button class="copy-btn" onclick="copyCode(this, 'spotlight-code')">Copy Code</button>
           </div>
           <pre><code id="spotlight-code" class="language-cpp">${escapeHtml(sol.code || '// Solution code')}</code></pre>
         </div>
@@ -914,12 +926,12 @@
         return;
       }
 
-      container.innerHTML = solutions.map((sol, idx) => {
+      container.innerHTML = solutions.map(sol => {
         const diffClass = sol.difficulty === 'Easy' ? 'badge-easy' : (sol.difficulty === 'Medium' ? 'badge-medium' : 'badge-hard');
         const timeStr = sol.solved_at ? new Date(sol.solved_at).toLocaleDateString() : 'Recent';
 
         return `
-          <div class="solution-card" onclick="openModal(${idx})">
+          <div class="solution-card" onclick="openModal('${sol.slug}')">
             <div>
               <div class="sol-card-header">
                 <span class="badge ${diffClass}">${sol.difficulty}</span>
@@ -979,8 +991,9 @@
       cat.addEventListener('change', filter);
     }
 
-    function openModal(idx) {
-      const sol = globalData.solutions[idx];
+    function openModal(slug) {
+      if (!globalData || !globalData.solutions) return;
+      const sol = globalData.solutions.find(s => s.slug === slug);
       if (!sol) return;
 
       const diffClass = sol.difficulty === 'Easy' ? 'badge-easy' : (sol.difficulty === 'Medium' ? 'badge-medium' : 'badge-hard');
