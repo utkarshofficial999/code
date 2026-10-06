@@ -1,7 +1,15 @@
 import re
 import os
+import sys
 import requests
 from typing import Dict, Any, Optional, Tuple
+if sys.platform.startswith("win"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from config import (
     GEMINI_API_KEY, GEMINI_MODEL,
     GROQ_API_KEY, GROQ_MODEL,
@@ -13,6 +21,7 @@ class ProblemSolver:
         self.gemini_client = None
         self.groq_key = None
         self.openai_client = None
+        self.openai_key = None
         self._init_clients()
 
     def _init_clients(self):
@@ -86,14 +95,31 @@ class ProblemSolver:
         raise RuntimeError(f"OpenAI API error {resp.status_code}: {resp.text}")
 
     def _generate_llm_text(self, prompt: str) -> str:
+        errors = []
         if self.groq_key:
-            return self._call_groq(prompt)
-        elif self.gemini_client:
-            return self._call_gemini(prompt)
-        elif OPENAI_API_KEY or os.getenv("OPENAI_API_KEY"):
-            return self._call_openai(prompt)
-        else:
-            raise RuntimeError("No LLM API key configured! Please set GROQ_API_KEY or GEMINI_API_KEY in .env")
+            try:
+                return self._call_groq(prompt)
+            except Exception as e:
+                errors.append(f"Groq error: {e}")
+                print(f"[Solver] Groq call failed: {e}. Trying fallback if available...")
+
+        if self.gemini_client:
+            try:
+                return self._call_gemini(prompt)
+            except Exception as e:
+                errors.append(f"Gemini error: {e}")
+                print(f"[Solver] Gemini call failed: {e}. Trying fallback if available...")
+
+        if self.openai_key:
+            try:
+                return self._call_openai(prompt)
+            except Exception as e:
+                errors.append(f"OpenAI error: {e}")
+                print(f"[Solver] OpenAI call failed: {e}.")
+
+        if errors:
+            raise RuntimeError(" | ".join(errors))
+        raise RuntimeError("No LLM API key configured! Please set GROQ_API_KEY or GEMINI_API_KEY in .env")
 
 
     def solve(self, question: Dict[str, Any], previous_error: Optional[str] = None) -> Dict[str, Any]:
@@ -210,12 +236,24 @@ FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS:
             t_match = re.search(r'Time\s*Complexity:\s*(.*)', comp_text, re.IGNORECASE)
             s_match = re.search(r'Space\s*Complexity:\s*(.*)', comp_text, re.IGNORECASE)
             if t_match:
-                time_comp = t_match.group(1).strip()
+                time_comp = re.sub(r'[*`]', '', t_match.group(1)).strip()
             if s_match:
-                space_comp = s_match.group(1).strip()
+                space_comp = re.sub(r'[*`]', '', s_match.group(1)).strip()
+
+        # Determine expected class or structure from fallback_starter
+        expected_class = None
+        class_match = re.search(r'\bclass\s+([A-Za-z0-9_]+)', fallback_starter)
+        if class_match:
+            expected_class = class_match.group(1)
+
+        is_valid_code = bool(code and len(code.strip()) > 20)
+        if expected_class:
+            has_class_structure = (expected_class in code) or ("class " in code)
+        else:
+            has_class_structure = ("class " in code) or ("struct " in code) or ("using " in code)
 
         return {
-            "success": bool(code and "class Solution" in code),
+            "success": bool(is_valid_code and has_class_structure),
             "code": code,
             "intuition": intuition,
             "approach": approach,

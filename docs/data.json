@@ -1,20 +1,20 @@
 {
   "summary": {
     "total_problems": 250,
-    "total_solved": 7,
-    "overall_percent": 2.8,
-    "easy_solved": 6,
+    "total_solved": 8,
+    "overall_percent": 3.2,
+    "easy_solved": 7,
     "medium_solved": 1,
     "hard_solved": 0,
-    "remaining": 243,
-    "last_updated": "2026-10-06 13:16:35 IST"
+    "remaining": 242,
+    "last_updated": "2026-10-06 14:08:13 IST"
   },
   "categories": [
     {
       "name": "Arrays & Hashing",
       "total": 22,
-      "solved": 7,
-      "percent": 31.8,
+      "solved": 8,
+      "percent": 36.4,
       "problems": [
         {
           "name": "Concatenation of Array",
@@ -69,7 +69,7 @@
           "name": "Majority Element",
           "slug": "majority-element",
           "difficulty": "Easy",
-          "solved": false,
+          "solved": true,
           "leetcode_url": "https://leetcode.com/problems/majority-element/"
         },
         {
@@ -1906,6 +1906,24 @@
     }
   ],
   "solutions": [
+    {
+      "slug": "majority-element",
+      "name": "Majority Element",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-06T13:45:21.505555",
+      "status": "Accepted",
+      "runtime": "0 ms",
+      "memory": "42.2 MB",
+      "submission_id": 2164007237,
+      "leetcode_url": "https://leetcode.com/problems/majority-element/",
+      "neetcode_url": "https://neetcode.io/problems/majority-element?list=neetcode250",
+      "intuition": "The majority element appears more than half of the array length, so if we pair each occurrence of a non‑majority element with a different element, the majority element will always remain unpaired. Maintaining a candidate and a counter while scanning the array captures this cancellation process.\n",
+      "approach": "1. Initialise `candidate` with any value (e.g., `nums[0]`) and `count = 0`.\n2. Iterate through the array:\n* If `count` is `0`, set `candidate = nums[i]` and `count = 1`.\n* Otherwise, increment `count` if `nums[i] == candidate`; else decrement `count`.\n3. After the single pass, `candidate` is guaranteed to be the majority element (the problem guarantees its existence).\n4. Return `candidate`.\n",
+      "time_complexity": "O(n) – one linear scan of the array.",
+      "space_complexity": "O(1) – only a few integer variables are used.",
+      "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <vector>\n\nclass Solution {\npublic:\n    int majorityElement(std::vector<int>& nums) {\n        // Boyer–Moore Voting Algorithm\n        int candidate = 0;   // placeholder, will be set when count becomes 0\n        int count = 0;\n\n        for (int num : nums) {\n            if (count == 0) {\n                candidate = num;\n                count = 1;\n            } else if (num == candidate) {\n                ++count;\n            } else {\n                --count;\n            }\n        }\n\n        // The problem guarantees that a majority element exists,\n        // so no further verification is required.\n        return candidate;\n    }\n};"
+    },
     {
       "slug": "group-anagrams",
       "name": "Group Anagrams",

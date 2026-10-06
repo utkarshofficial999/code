@@ -83,9 +83,21 @@
       "runtime": "0 ms",
       "memory": "11.6 MB",
       "solution_path": "/home/runner/work/code/code/solutions/arrays_and_hashing/027_remove-element.cpp"
+    },
+    "majority-element": {
+      "slug": "majority-element",
+      "name": "Majority Element",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-06T13:45:21.505555",
+      "status": "Accepted",
+      "submission_id": 2164007237,
+      "runtime": "0 ms",
+      "memory": "42.2 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\169_majority-element.cpp"
     }
   },
   "history": [],
   "created_at": "2026-10-05T16:27:47.539116",
-  "last_updated": "2026-10-05T16:24:13.151521"
+  "last_updated": "2026-10-06T13:45:21.505566"
 }
