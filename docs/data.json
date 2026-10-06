@@ -1,20 +1,20 @@
 {
   "summary": {
     "total_problems": 250,
-    "total_solved": 9,
-    "overall_percent": 3.6,
-    "easy_solved": 8,
+    "total_solved": 10,
+    "overall_percent": 4.0,
+    "easy_solved": 9,
     "medium_solved": 1,
     "hard_solved": 0,
-    "remaining": 241,
-    "last_updated": "2026-10-06 17:39:44 IST"
+    "remaining": 240,
+    "last_updated": "2026-10-06 17:46:21 IST"
   },
   "categories": [
     {
       "name": "Arrays & Hashing",
       "total": 22,
-      "solved": 9,
-      "percent": 40.9,
+      "solved": 10,
+      "percent": 45.5,
       "problems": [
         {
           "name": "Concatenation of Array",
@@ -83,7 +83,7 @@
           "name": "Design HashMap",
           "slug": "design-hashmap",
           "difficulty": "Easy",
-          "solved": false,
+          "solved": true,
           "leetcode_url": "https://leetcode.com/problems/design-hashmap/"
         },
         {
@@ -1906,6 +1906,24 @@
     }
   ],
   "solutions": [
+    {
+      "slug": "design-hashmap",
+      "name": "Design HashMap",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-06T17:46:18.927033",
+      "status": "Accepted",
+      "runtime": "52 ms",
+      "memory": "229.2 MB",
+      "submission_id": 2164203275,
+      "leetcode_url": "https://leetcode.com/problems/design-hashmap/",
+      "neetcode_url": "https://neetcode.io/problems/design-hashmap?list=neetcode250",
+      "intuition": "Because the keys are bounded (`0 ≤ key ≤ 10⁶`) we can allocate a flat array indexed directly by the key. Using a special sentinel (‑1) tells us whether a slot is empty, giving true‑O(1) time for all operations without any hashing or chaining.\n",
+      "approach": "1. Allocate a `std::vector<int>` of size `MAX_KEY + 1` (`MAX_KEY = 1'000'000`).\n2. Initialise every entry with `-1` – the sentinel meaning “no mapping”.\n3. **put(key, value)** – store `value` at `table[key]`.\n4. **get(key)** – return `table[key]` (or `-1` if it still holds the sentinel).\n5. **remove(key)** – reset `table[key]` back to `-1`.\n\nAll operations are direct array accesses, therefore constant time.\n",
+      "time_complexity": "O(1) for put, get, and remove.",
+      "space_complexity": "O(MAX_KEY) → O(10⁶) integers ≈ 4 MB.",
+      "code": "#include <iostream>\n#include <vector>\n#include <string>\n#include <unordered_map>\n#include <unordered_set>\n#include <queue>\n#include <stack>\n#include <algorithm>\n#include <cmath>\nusing namespace std;\n\n#include <vector>\n#include <cstddef>   // for nullptr\n\nclass MyHashMap {\npublic:\n    /** Initialize your data structure here.     MyHashMap() : table(MAX_KEY + 1, SENTINEL) {}\n\n    /** Insert a (key, value) pair into the HashMap.\n        If the key already exists, update the corresponding value.     void put(int key, int value) {\n        table[key] = value;\n    }\n\n    /** Returns the value to which the specified key is mapped,\n        or -1 if this map contains no mapping for the key.     int get(int key) const {\n        return table[key];\n    }\n\n    /** Removes the mapping of the specified value key\n        if this map contains a mapping for the key.     void remove(int key) {\n        table[key] = SENTINEL;\n    }\n\nprivate:\n    static constexpr int MAX_KEY = 1'000'000;   // given constraint\n    static constexpr int SENTINEL = -1;        // value never used as a legitimate stored value\n    std::vector<int> table;                    // direct‑address table\n};\n\n/**\n * Your MyHashMap object will be instantiated and called as such:\n * MyHashMap* obj = new MyHashMap();\n * obj->put(key,value);\n * int param_2 = obj->get(key);\n * obj->remove(key);"
+    },
     {
       "slug": "design-hashset",
       "name": "Design HashSet",

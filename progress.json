@@ -107,9 +107,21 @@
       "runtime": "15 ms",
       "memory": "49.7 MB",
       "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\705_design-hashset.cpp"
+    },
+    "design-hashmap": {
+      "slug": "design-hashmap",
+      "name": "Design HashMap",
+      "category": "Arrays & Hashing",
+      "difficulty": "Easy",
+      "solved_at": "2026-10-06T17:46:18.927033",
+      "status": "Accepted",
+      "submission_id": 2164203275,
+      "runtime": "52 ms",
+      "memory": "229.2 MB",
+      "solution_path": "E:\\leetcode agent\\solutions\\arrays_and_hashing\\706_design-hashmap.cpp"
     }
   },
   "history": [],
   "created_at": "2026-10-05T16:27:47.539116",
-  "last_updated": "2026-10-06T17:39:40.035649"
+  "last_updated": "2026-10-06T17:46:18.927041"
 }
