@@ -73,7 +73,7 @@ LEETCODE_SESSION=
 LEETCODE_CSRFTOKEN=
 
 # 3. Schedule Settings
-SCHEDULE_TIMES=09:00,15:00,21:00
+SCHEDULE_TIMES=09:00,15:45,21:00
 QUESTIONS_PER_RUN=1
 RANDOM_JITTER_MINUTES=15
 ```
@@ -107,7 +107,7 @@ Displays overall completion percentage, topic-by-topic progress bars, and recent
 
 ### 4. Start 24-Hour Multi-Time Daemon
 ```powershell
-# Runs in the background at 09:00, 15:00, 21:00
+# Runs in the background at 09:00, 15:45, 21:00
 .\.venv\Scripts\python.exe main.py daemon
 
 # Or start daemon and solve 1 cycle immediately
@@ -128,7 +128,7 @@ Displays overall completion percentage, topic-by-topic progress bars, and recent
 
 ## ⏱️ How the 24-Hour Multi-Time Daemon Works
 
-1. The agent reads `SCHEDULE_TIMES` (e.g. `09:00,15:00,21:00`).
+1. The agent reads `SCHEDULE_TIMES` (e.g. `09:00,15:45,21:00`).
 2. When a scheduled time arrives, it applies a random jitter (between 0 and `RANDOM_JITTER_MINUTES`) so requests do not trigger at the exact same millisecond every day.
 3. It consults `roadmap.py` and `tracker.py` to pick the next unsolved question from the active NeetCode topic.
 4. It fetches live question specifications and C++ starter boilerplate from LeetCode.
