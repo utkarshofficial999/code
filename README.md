@@ -107,11 +107,26 @@ Displays overall completion percentage, topic-by-topic progress bars, and recent
 
 ### 4. Start 24-Hour Multi-Time Daemon
 ```powershell
-# Runs in the background at 09:00, 15:45, 16:15
+# Runs in the foreground/background terminal at 09:00, 15:45, 16:15
 .\.venv\Scripts\python.exe main.py daemon
 
 # Or start daemon and solve 1 cycle immediately
 .\.venv\Scripts\python.exe main.py daemon --now
+```
+
+### 4b. Setup Windows Task Scheduler (Recommended - 100% Reliable & Silent)
+```powershell
+# Automatically register daily scheduled tasks from .env SCHEDULE_TIMES (09:00, 15:45, 16:15)
+.\setup_scheduler.ps1 -Action Install
+
+# View all active registered tasks
+.\setup_scheduler.ps1 -Action List
+
+# Trigger an immediate run anytime
+.\setup_scheduler.ps1 -Action RunNow
+
+# Remove tasks if needed
+.\setup_scheduler.ps1 -Action Uninstall
 ```
 
 ### 5. View Roadmap Topics
