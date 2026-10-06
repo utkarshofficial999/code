@@ -118,6 +118,7 @@ switch ($Action.ToLower()) {
                 -AllowStartIfOnBatteries `
                 -DontStopIfGoingOnBatteries `
                 -StartWhenAvailable `
+                -WakeToRun `
                 -ExecutionTimeLimit (New-TimeSpan -Hours 1)
 
             Register-ScheduledTask `

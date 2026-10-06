@@ -47,6 +47,14 @@ def save_chat_id(chat_id: str):
 def git_commit_and_push(commit_msg: str) -> bool:
     """Stages solutions, progress, and docs, commits and pushes to origin."""
     try:
+        gh_token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+        if gh_token:
+            repo_slug = os.getenv("GITHUB_REPOSITORY", "utkarshofficial999/code")
+            remote_url = f"https://x-access-token:{gh_token}@github.com/{repo_slug}.git"
+            subprocess.run(["git", "remote", "set-url", "origin", remote_url], cwd=str(BASE_DIR), check=False)
+            subprocess.run(["git", "config", "user.name", "github-actions[bot]"], cwd=str(BASE_DIR), check=False)
+            subprocess.run(["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"], cwd=str(BASE_DIR), check=False)
+
         subprocess.run(["git", "add", "solutions/", "progress.json", "docs/"], cwd=str(BASE_DIR), check=True)
         status_res = subprocess.run(["git", "diff", "--staged", "--quiet"], cwd=str(BASE_DIR))
         if status_res.returncode == 0:
@@ -400,6 +408,29 @@ class TelegramBotService:
                 time.sleep(3)
 
 
+def start_health_server():
+    """Starts a minimal HTTP health check server if PORT environment variable is set."""
+    port_str = os.getenv("PORT")
+    if not port_str:
+        return
+    try:
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        class HealthHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status":"healthy","service":"leetcode-telegram-bot"}')
+            def log_message(self, format, *args):
+                pass
+        port = int(port_str)
+        server = HTTPServer(("0.0.0.0", port), HealthHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        print(f"[Telegram] Cloud health server active on port {port}")
+    except Exception as e:
+        print(f"[Telegram] Health server warning: {e}")
+
+
 def acquire_single_instance_lock(port: int = 49250):
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -422,7 +453,10 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
-    _lock_sock = acquire_single_instance_lock()
+    start_health_server()
+    # Only acquire single-instance socket lock on desktop (not inside cloud containers with dynamic ports)
+    if not os.getenv("PORT"):
+        _lock_sock = acquire_single_instance_lock()
     bot = TelegramBotService()
     bot.start_polling()
 

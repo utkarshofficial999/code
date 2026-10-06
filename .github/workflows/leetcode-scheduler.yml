@@ -10,6 +10,10 @@ on:
     # 04:15 PM IST -> 10:45 UTC
     - cron: '45 10 * * *'
 
+  # External Webhook / Cron Trigger (e.g. cron-job.org)
+  repository_dispatch:
+    types: [solve-scheduled, leetcode-solve]
+
   # Allows manual triggers anytime from GitHub web UI or GitHub Mobile app
   workflow_dispatch:
     inputs:
