@@ -7,28 +7,31 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each original string by prefixing it with its length and a delimiter that never appears in the length representation (e.g., ‘:’). During decoding we can read the length, skip the delimiter, and extract exactly that many characters – this works for any possible characters inside the original strings, including empty strings.
+ * Encode each string with its length first, then the raw characters. By storing the length in a fixed‑size (4‑byte) binary header we never need a special delimiter, so any character (including ‘#’, ‘/’, etc.) inside the original strings is safe.
  *
  * --- Approach ---
- * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s` append `to_string(s.size())`, then a single delimiter `':'`, then the string itself to the result.
- * * The final concatenated string is returned.
+ * 1. **Encoding**
+ * * For every string `str` in the input vector:
+ * * Compute its length `len` (as a 32‑bit unsigned integer).
+ * * Append the 4 bytes of `len` in big‑endian order to the result string.
+ * * Append the characters of `str` itself.
+ * * The final encoded string is the concatenation of all these blocks.
  * 
- * 2. **Decode**
+ * 2. **Decoding**
  * * Scan the encoded string from left to right.
- * * For each token, read characters until the delimiter `':'` – this substring is the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string.
- * * Advance the cursor past the extracted part and repeat until the whole encoded string is consumed.
+ * * Read the next 4 bytes, reconstruct the original length `len`.
+ * * Extract the following `len` characters as one decoded string and push it into the answer vector.
+ * * Repeat until the whole encoded string is consumed.
  * 
  * 3. **Edge Cases**
- * * Empty input vector → encode returns an empty string; decode of an empty string returns an empty vector.
- * * Empty strings inside the vector are correctly encoded as `"0:"` and decoded back to `""`.
- * * Use `size_t` (64‑bit) for lengths to avoid overflow for very long strings.
+ * * Empty input vector → returns an empty string.
+ * * Empty strings inside the vector are encoded as a 4‑byte zero length followed by nothing, and decoded correctly.
+ * * The algorithm works for any string content because no delimiter is used.
+ * * Lengths larger than `2³²‑1` cannot be represented; the problem constraints guarantee total size fits in memory, so a 32‑bit length is sufficient.
  *
  * --- Complexity ---
- * Time Complexity:  O(total number of characters) for both encode and decode.
- * Space Complexity: O(total number of characters) for the encoded string (output) and O(total number of characters) for the decoded vector (output). No extra auxiliary space beyond the outputs.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is read/written once).
+ * Space Complexity: O(N) for the encoded string plus O(N) for the decoded vector (output space).
  */
 
 #include <iostream>
@@ -47,45 +50,37 @@ using namespace std;
 
 class Solution {
 public:
-    // Encodes a list of strings to a single string.
-    string encode(const vector<string>& strs) {
+    // Encode a list of strings to a single string.
+    string encode(vector<string>& strs) {
         string encoded;
-        // Reserve approximate size to avoid many reallocations.
-        size_t total_len = 0;
-        for (const auto& s : strs) total_len += s.size() + 20; // extra for length and delimiter
-        encoded.reserve(total_len);
+        encoded.reserve(strs.size() * 5); // rough reservation
 
         for (const string& s : strs) {
-            encoded += to_string(s.size());
-            encoded += ':';          // delimiter that never appears in the length part
-            encoded += s;
+            uint32_t len = static_cast<uint32_t>(s.size());
+            // store length in big‑endian order (most significant byte first)
+            for (int i = 3; i >= 0; --i) {
+                encoded.push_back(static_cast<char>((len >> (i * 8)) & 0xFF));
+            }
+            encoded.append(s);
         }
         return encoded;
     }
 
-    // Decodes a single string to a list of strings.
-    vector<string> decode(const string& s) {
+    // Decode a single string to a list of strings.
+    vector<string> decode(string s) {
         vector<string> result;
-        size_t i = 0, n = s.size();
+        size_t i = 0;
+        const size_t n = s.size();
 
-        while (i < n) {
-            // Find delimiter ':'
-            size_t delim = s.find(':', i);
-            // If delimiter not found, the input is malformed; break.
-            if (delim == string::npos) break;
-
-            // Extract length substring and convert to integer
-            size_t len = 0;
-            // Manual conversion avoids extra string allocation
-            for (size_t j = i; j < delim; ++j) {
-                len = len * 10 + (s[j] - '0');
+        while (i + 4 <= n) {               // need at least 4 bytes for length
+            uint32_t len = 0;
+            for (int j = 0; j < 4; ++j) {
+                len = (len << 8) | static_cast<unsigned char>(s[i + j]);
             }
-
-            // Move cursor to the start of the actual string
-            i = delim + 1;
-            // Extract the string of length 'len'
+            i += 4;
+            // safety check – if the encoded string is malformed we break
+            if (i + len > n) break;
             result.emplace_back(s.substr(i, len));
-            // Advance cursor past the extracted string
             i += len;
         }
         return result;
