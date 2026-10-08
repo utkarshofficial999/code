@@ -7,26 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a separator that never appears in the length itself. During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings.
+ * Store each string together with its length. By prefixing a string with its length and a non‑numeric delimiter we can uniquely split the concatenated result, even when the original strings contain any characters (including the delimiter itself).
  *
  * --- Approach ---
  * 1. **Encode**
- * * Initialise an empty result string.
- * * For every string `s` in the input vector, append `to_string(s.size())`, a special separator `'/'`, and then `s` itself.
- * * Return the concatenated result.
+ * * For every string `str` in the input vector, compute its length `len`.
+ * * Append `len`, a special delimiter (e.g., `'#'`), and then `str` itself to a result string.
+ * * The final concatenated string is the encoding.
  * 
  * 2. **Decode**
- * * If the encoded string is empty, return an empty vector.
- * * Scan the string from left to right.
- * * Find the next separator `'/'`; the substring before it is the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string.
+ * * Scan the encoded string from left to right.
+ * * Locate the next delimiter `'#'`; the characters before it form the decimal representation of the length `len`.
+ * * Convert this substring to an integer, then read the next `len` characters as the original string.
  * * Advance the cursor past the extracted part and repeat until the whole encoded string is processed.
  * 
- * 3. The separator `'/'` is safe because it never appears inside the numeric length prefix, guaranteeing an unambiguous split.
+ * Both steps run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the output string / vector (aside from the input storage).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
+ * Space Complexity: O(N) for the encoded string (output) and O(N) for the decoded vector (input), i.e., linear auxiliary space.
  */
 
 #include <iostream>
@@ -43,18 +42,18 @@ using namespace std;
 #include <bits/stdc++.h>
 using namespace std;
 
-class Solution {
+class Codec {
 public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
         encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         [](long long sum, const string& s){ return sum + s.size(); })
                          + strs.size()*5 ); // rough reserve
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // separator between length and content
+            encoded += '#';          // delimiter that never appears in the length field
             encoded += s;
         }
         return encoded;
@@ -66,16 +65,16 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // locate separator
-            size_t slashPos = s.find('/', i);
-            // malformed input guard (should not happen in LeetCode tests)
-            if (slashPos == string::npos) break;
+            // find delimiter '#'
+            size_t delim = s.find('#', i);
+            // safety check (should never happen for a valid encoding)
+            if (delim == string::npos) break;
 
-            // length substring -> integer
-            size_t len = stoull(s.substr(i, slashPos - i));
+            // length of the next string
+            size_t len = stoull(s.substr(i, delim - i));
 
-            // extract the actual string
-            size_t start = slashPos + 1;
+            // extract the string of length 'len' after the delimiter
+            size_t start = delim + 1;
             result.emplace_back(s.substr(start, len));
 
             // move cursor forward
@@ -84,3 +83,8 @@ public:
         return result;
     }
 };
+
+/*
+The LeetCode platform expects the class name to be Codec with the two
+public methods encode and decode as defined above.
+*/
