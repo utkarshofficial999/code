@@ -7,32 +7,30 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a separator that never appears in the length representation. While decoding we can read the length, skip the separator, and then extract exactly that many characters – this makes the process deterministic for any possible characters inside the original strings.
+ * Encode each string with its length followed by a special separator (e.g., ‘#’).
+ * During decoding we first read the length, skip the separator, then read exactly that many characters – the separator can appear inside the original string without causing ambiguity.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Initialise an empty result string.
  * * For every string `str` in the input vector:
- * – Append `to_string(str.size())` (the length).
- * – Append a special separator, e.g. `'/'`.
- * – Append the string `str` itself.
+ * – Append `to_string(str.size())`, then a delimiter `'#'`, then the string itself.
  * * Return the concatenated result.
  * 
  * 2. **Decode**
- * * Iterate over the encoded string with an index `i`.
- * * While `i` is less than the string size:
- * – Read characters until the separator `'/'` to obtain the length `len`.
+ * * Scan the encoded string from left to right.
+ * * For each segment:
+ * – Read characters until `'#'` to obtain the length `len`.
  * – Convert the collected digits to an integer.
- * – Move `i` past the separator.
- * – Extract the next `len` characters as one original string and push it to the answer vector.
- * – Advance `i` by `len`.
+ * – Extract the next `len` characters as the original string and push it into the answer vector.
+ * – Continue from the position after those `len` characters.
  * * Return the reconstructed vector.
  * 
- * 3. The separator `'/'` is safe because it never appears in the numeric length prefix, guaranteeing an unambiguous split even if the original strings contain `'/'` or any other characters.
+ * 3. The delimiter is never interpreted as part of the length; we always know exactly how many characters to read after it, so any character (including ‘#’) inside the original strings is safe.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
- * Space Complexity: O(N) for the encoded string and the output vector during decoding.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is processed a constant number of times).
+ * Space Complexity: O(N) for the encoded string and the output vector (no extra auxiliary structures beyond the result).
  */
 
 #include <iostream>
@@ -54,10 +52,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 10); // rough reservation
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                          [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // separator between length and content
+            encoded += '#';
             encoded += s;
         }
         return encoded;
@@ -65,21 +66,20 @@ public:
 
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> decoded;
+        vector<string> result;
         size_t i = 0, n = s.size();
+
         while (i < n) {
             // read length
             size_t j = i;
-            while (j < n && s[j] != '/') ++j;
-            // j now points to the separator
+            while (j < n && s[j] != '#') ++j;
+            // j now points to '#'
             string lenStr = s.substr(i, j - i);
-            size_t len = stoull(lenStr);   // safe for large lengths
-            i = j + 1;                     // move past '/'
-
-            // extract the string of length 'len'
-            decoded.emplace_back(s.substr(i, len));
-            i += len;                      // move to the start of next length field
+            size_t len = stoull(lenStr);   // length of the next string
+            i = j + 1;                      // position of the first character of the string
+            result.emplace_back(s.substr(i, len));
+            i += len;                       // move to the start of the next length field
         }
-        return decoded;
+        return result;
     }
 };
