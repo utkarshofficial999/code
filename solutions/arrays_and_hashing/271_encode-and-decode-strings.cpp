@@ -7,26 +7,29 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). Because the length is a decimal number, the separator will never appear inside the length field, guaranteeing an unambiguous decoding even when the original strings contain any characters.
+ * Encode each string by prefixing it with its length and a non‑numeric separator. While decoding we first read the length up to the separator, then extract exactly that many characters – the separator itself never appears in the length field, so the original content (even if it contains the separator) is recovered safely.
  *
  * --- Approach ---
  * 1. **Encode**
  * - Iterate over the input vector `strs`.
- * - For each string `s`, append `to_string(s.size())`, then a delimiter `'/'`, then `s` itself to a result string.
- * - Return the concatenated result.
+ * - For each string `s`, append `to_string(s.size())`, a delimiter `':'`, and the string itself to the result.
+ * - The final concatenated string is returned.
  * 
  * 2. **Decode**
  * - Scan the encoded string from left to right.
- * - For each segment, read characters until the delimiter `'/'` to obtain the length `len`.
- * - Convert the length substring to an integer.
+ * - Locate the next delimiter `':'` to obtain the length of the upcoming original string.
+ * - Convert the length substring to an integer (`stoll` to avoid overflow).
  * - Extract the next `len` characters as the original string and push it into the answer vector.
- * - Continue until the whole encoded string is processed.
+ * - Move the cursor past the extracted part and repeat until the end of the encoded string.
  * 
- * Both steps run in linear time relative to the total number of characters.
+ * 3. **Edge Cases**
+ * - Empty input vector → encoded string is empty.
+ * - Empty encoded string → decoded vector is empty.
+ * - Strings may contain any characters, including the delimiter; because we read a fixed number of characters after the delimiter, the content is preserved.
  *
  * --- Complexity ---
- * Time Complexity:  O(total_chars) – each character is visited a constant number of times during encoding and decoding.
- * Space Complexity: O(total_chars) – the encoded string and the output vector together store all characters.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is processed a constant number of times).
+ * Space Complexity: O(N) for the encoded string and the output vector (no extra auxiliary structures beyond the output).
  */
 
 #include <iostream>
@@ -48,14 +51,12 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        // Reserve approximate size to avoid many reallocations
-        size_t total_len = 0;
-        for (const auto& s : strs) total_len += s.size() + 12; // extra for length and delimiter
-        encoded.reserve(total_len);
-
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size() * 5 ); // rough reserve to avoid many reallocations
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // delimiter that never appears in the length field
+            encoded += ':';          // delimiter that is not a digit
             encoded += s;
         }
         return encoded;
@@ -65,27 +66,16 @@ public:
     vector<string> decode(const string& s) {
         vector<string> result;
         size_t i = 0, n = s.size();
-
         while (i < n) {
-            // Find delimiter '/'
-            size_t slashPos = s.find('/', i);
-            // Defensive check – malformed input (should not happen in LeetCode)
-            if (slashPos == string::npos) break;
-
-            // Extract length
-            size_t len = 0;
-            // Manual conversion to avoid stoi overhead and handle large lengths safely
-            for (size_t j = i; j < slashPos; ++j) {
-                len = len * 10 + (s[j] - '0');
-            }
-
-            // Extract the actual string of length 'len'
-            size_t start = slashPos + 1;
-            string token = s.substr(start, len);
-            result.push_back(std::move(token));
-
-            // Move index past the processed token
-            i = start + len;
+            // find delimiter
+            size_t j = i;
+            while (j < n && s[j] != ':') ++j;
+            // length substring [i, j)
+            long long len = stoll(s.substr(i, j - i));
+            // extract the string of length 'len' after the delimiter
+            string word = s.substr(j + 1, static_cast<size_t>(len));
+            result.push_back(std::move(word));
+            i = j + 1 + static_cast<size_t>(len);
         }
         return result;
     }
