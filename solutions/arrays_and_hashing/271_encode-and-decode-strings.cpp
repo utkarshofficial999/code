@@ -7,31 +7,27 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – the separator never appears in the length field, so the original content (even if it contains ‘#’) is recovered safely.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’). Because the length tells us exactly how many characters belong to the original string, the content can contain any possible character, including the separator itself.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Initialise an empty result string.
- * * For every string `s` in the input vector:
- * – Append `to_string(s.size())`, then a delimiter `'#'`, then the string `s` itself.
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then the string itself to the result.
  * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Locate the next delimiter `'#'` to obtain the length `len` of the next original string.
- * * Convert the length substring to an integer (`stoll`).
- * * The original string occupies the next `len` characters; extract it and push it into the answer vector.
- * * Move the scanning index past the extracted part and repeat until the end of the encoded string.
+ * * Read characters until the delimiter `'#'` – this substring is the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is processed.
  * 
- * 3. **Correctness for Edge Cases**
- * * Empty input vector → encoded string is empty, decoding returns an empty vector.
- * * Empty strings inside the vector → encoded as `"0#"`; decoding reads length 0 and correctly produces an empty string.
- * * Strings may contain any character, including ‘#’, because we never rely on the delimiter after the length field.
+ * 3. **Edge Cases**
+ * * Empty input vector → encode returns an empty string, decode of an empty string returns an empty vector.
+ * * Empty strings inside the vector are handled naturally because their length is `0` (`"0#"`).
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is visited a constant number of times during encoding and decoding).
- * Space Complexity: O(N) for the output of both functions (the encoded string or the decoded vector).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
+ * Space Complexity: O(N) for the encoded string and the decoded vector.
  */
 
 #include <iostream>
@@ -53,10 +49,7 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reserve
-
+        encoded.reserve(strs.size() * 10); // rough reservation
         for (const string& s : strs) {
             encoded += to_string(s.size());
             encoded += '#';
@@ -67,23 +60,21 @@ public:
 
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> result;
+        vector<string> decoded;
         size_t i = 0, n = s.size();
-
         while (i < n) {
             // find delimiter '#'
-            size_t delim = s.find('#', i);
-            // safety check (should never happen for valid input)
-            if (delim == string::npos) break;
-
-            // length of the next string
-            long long len = stoll(s.substr(i, delim - i));
-            i = delim + 1; // move past '#'
-
-            // extract the string of length 'len'
-            result.emplace_back(s.substr(i, (size_t)len));
-            i += (size_t)len;
+            size_t j = i;
+            while (j < n && s[j] != '#') ++j;
+            // length substring is [i, j)
+            size_t len = 0;
+            if (j > i) {
+                len = stoull(s.substr(i, j - i));
+            }
+            i = j + 1; // skip '#'
+            decoded.emplace_back(s.substr(i, len));
+            i += len;
         }
-        return result;
+        return decoded;
     }
 };
