@@ -7,28 +7,26 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). Because the length tells us exactly how many characters belong to the original string, the separator can appear anywhere inside the string without ambiguity.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’).
+ * Because the length tells us exactly where a string ends, the original content can contain any character, including the separator itself.
  *
  * --- Approach ---
  * 1. **Encode**
- * * For every string `str` in the input vector:
- * – Compute its length `len`.
- * – Append `len`, a delimiter `'/'`, and the string itself to the result.
- * * The concatenated result is returned as the encoded single string.
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
+ * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each segment:
- * – Read characters until the delimiter `'/'` to obtain the length `len`.
- * – Convert the extracted substring to an integer.
- * – The next `len` characters form the original string; push it into the answer vector.
- * – Move the cursor past those `len` characters and repeat until the end of the encoded string.
+ * * Read characters until the delimiter `'#'` to obtain the length `len` of the next original string.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is processed.
  * 
- * 3. The algorithm works for empty strings, strings containing any characters (including the delimiter), and very large inputs because the length prefix removes any ambiguity.
+ * Both steps run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  
- * Space Complexity: 
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
+ * Space Complexity: O(N) for the encoded string and the output vector.
  */
 
 #include <iostream>
@@ -50,13 +48,14 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), (size_t)0,
-                                            [](size_t sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reserve
+        // Reserve approximate size to avoid many reallocations
+        size_t total_len = 0;
+        for (const auto& s : strs) total_len += s.size() + 10; // extra for length and '#'
+        encoded.reserve(total_len);
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';
+            encoded += '#';
             encoded += s;
         }
         return encoded;
@@ -68,24 +67,18 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // find delimiter '/'
-            size_t slashPos = s.find('/', i);
-            // It must exist in a valid encoding
-            if (slashPos == string::npos) break;
-
-            // length substring [i, slashPos)
+            // Find delimiter '#'
+            size_t j = i;
+            while (j < n && s[j] != '#') ++j;
+            // Extract length
             size_t len = 0;
-            // manual conversion to avoid extra string allocation
-            for (size_t j = i; j < slashPos; ++j) {
-                len = len * 10 + (s[j] - '0');
-            }
-
-            // extract the actual string of length 'len'
-            size_t start = slashPos + 1;
-            result.emplace_back(s.substr(start, len));
-
-            // move cursor past the extracted string
-            i = start + len;
+            // stoi on substring is safe because we know it contains only digits
+            len = static_cast<size_t>(stoll(s.substr(i, j - i)));
+            // Move past '#'
+            i = j + 1;
+            // Extract the original string of length 'len'
+            result.emplace_back(s.substr(i, len));
+            i += len;
         }
         return result;
     }
