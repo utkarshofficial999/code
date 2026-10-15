@@ -7,30 +7,30 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘:’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings, including the separator itself.
+ * Encode each string by prefixing it with its length and a delimiter that never appears in the length representation. While decoding we can read the length, skip the delimiter, and extract exactly that many characters – this works for any possible characters inside the original strings, including empty strings.
  *
  * --- Approach ---
- * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `':'`, then `s` itself to the result string.
- * * Return the concatenated result.
+ * 1. **Encoding**
+ * * Initialise an empty result string `enc`.
+ * * For every string `str` in the input vector:
+ * – Append `to_string(str.size())` (the length).
+ * – Append a special delimiter, e.g. `'#'`.
+ * – Append the string `str` itself.
+ * * Return the concatenated `enc`.
  * 
- * 2. **Decode**
+ * 2. **Decoding**
  * * Scan the encoded string `s` from left to right.
- * * Read characters until the delimiter `':'` to obtain the length `len` of the next original string.
- * * Convert the collected digits to an integer.
- * * Extract the next `len` characters as the original string and push it into the answer vector.
- * * Continue until the whole encoded string is processed.
+ * * For each token:
+ * – Read characters until the delimiter `'#'` to obtain the length `len`.
+ * – Convert the collected digits to an integer.
+ * – Take the next `len` characters as the original string and push it into the answer vector.
+ * – Move the cursor past those `len` characters and repeat until the end of `s`.
  * 
- * 3. **Edge Cases**
- * * Empty input vector → encode returns an empty string; decode of an empty string returns an empty vector.
- * * Empty strings inside the vector are correctly encoded as `"0:"` and decoded back to `""`.
- * * All characters (including `':'`) are safely handled because the delimiter is only used after the length field, which consists solely of digits.
+ * 3. The delimiter `'#'` is safe because it never appears in the numeric length part, and the length tells us exactly how many characters to read, so any `'#'` inside the original string is treated as ordinary data.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
- * Space Complexity: O(N) for the encoded string and the decoded vector.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
+ * Space Complexity: O(N) for the output string / vector (excluding the input).
  */
 
 #include <iostream>
@@ -52,10 +52,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 5); // rough reservation
+        encoded.reserve( (size_t) accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += ':';          // delimiter separating length and content
+            encoded += '#';               // delimiter
             encoded += s;
         }
         return encoded;
@@ -65,16 +68,19 @@ public:
     vector<string> decode(const string& s) {
         vector<string> decoded;
         size_t i = 0, n = s.size();
+
         while (i < n) {
             // read length
             size_t j = i;
-            while (j < n && s[j] != ':') ++j;
-            // j now points to ':'
+            while (j < n && s[j] != '#') ++j;
+            // j now points to delimiter
             string lenStr = s.substr(i, j - i);
-            size_t len = stoull(lenStr);   // safe for large lengths
-            i = j + 1;                     // move past ':'
+            size_t len = stoull(lenStr);   // length of the next string
+            i = j + 1;                     // skip delimiter
+
+            // extract the string of length 'len'
             decoded.emplace_back(s.substr(i, len));
-            i += len;                      // move to start of next length field
+            i += len;                      // move to start of next token
         }
         return decoded;
     }
