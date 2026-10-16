@@ -7,33 +7,24 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length followed by a delimiter that can never appear inside the length representation (e.g., ‘/’). During decoding we read the length, skip the delimiter, and extract exactly that many characters. This makes the encoding unambiguous even when the original strings contain any possible characters.
+ * Encode each string with its length followed by a unique separator (e.g., ‘/’). Knowing the length lets us read the exact number of characters for the original string, so any character (including the separator) inside the string is safely handled.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Initialise an empty `std::string ans`.
- * * For every string `w` in the input vector:
- * – Append `std::to_string(w.size())`.
- * – Append a single delimiter character (we use ‘/’).
- * – Append the string `w` itself.
- * * Return the concatenated result.
+ * - Iterate over the input vector.
+ * - For each string `s`, append `to_string(s.size())`, then a separator `'/'`, then `s` itself to the result string.
+ * - The concatenated result is the encoded single string.
  * 
  * 2. **Decode**
- * * Scan the encoded string from left to right.
- * * For each token:
- * – Read characters until the delimiter ‘/’ is met; those characters form the decimal length `len`.
- * – Convert `len` to an integer.
- * – The next `len` characters belong to the original string; copy them into the answer vector.
- * – Move the cursor past those `len` characters and repeat until the end of the encoded string.
- * * Return the vector of recovered strings.
- * 
- * 3. **Edge Cases**
- * * Empty input vector → encode returns an empty string; decode of an empty string returns an empty vector.
- * * Strings may be empty, contain delimiters, spaces, or any ASCII/Unicode characters – the length‑prefix guarantees correct reconstruction.
+ * - Scan the encoded string from left to right.
+ * - Locate the next separator `'/'` to obtain the length prefix.
+ * - Convert the length substring to an integer `len`.
+ * - Extract the next `len` characters as the original string and push it into the answer vector.
+ * - Move the cursor past the extracted part and repeat until the whole encoded string is processed.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encode and decode scan each character once).
- * Space Complexity: O(N) for the output (the encoded string or the decoded vector).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character a constant number of times).
+ * Space Complexity: O(N) for the output (the encoded string or the decoded vector). No extra auxiliary space beyond the output is used.
  */
 
 #include <iostream>
@@ -55,13 +46,10 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( (size_t) accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reservation
-
+        encoded.reserve(strs.size() * 10); // small reservation, grows as needed
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // delimiter that never appears in the length part
+            encoded += '/';          // separator that never appears in the length part
             encoded += s;
         }
         return encoded;
@@ -71,19 +59,15 @@ public:
     vector<string> decode(const string& s) {
         vector<string> result;
         size_t i = 0, n = s.size();
-
         while (i < n) {
-            // read length
-            size_t j = i;
-            while (j < n && s[j] != '/') ++j;
-            // j now points to the delimiter
-            string lenStr = s.substr(i, j - i);
-            size_t len = stoull(lenStr);   // safe for large lengths
-            i = j + 1;                     // skip delimiter
-
-            // extract the original string of length 'len'
-            result.emplace_back(s.substr(i, len));
-            i += len;                      // move to the start of next token
+            // find the separator that ends the length field
+            size_t sep = s.find('/', i);
+            // length substring is [i, sep)
+            int len = stoi(s.substr(i, sep - i));
+            // the actual string starts after the separator
+            size_t start = sep + 1;
+            result.emplace_back(s.substr(start, len));
+            i = start + len; // move to the next encoded block
         }
         return result;
     }
