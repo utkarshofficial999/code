@@ -7,24 +7,30 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string with its length followed by a unique separator (e.g., ‘/’). Knowing the length lets us read the exact number of characters for the original string, so any character (including the separator) inside the string is safely handled.
+ * Encode each string by prefixing it with its length and a separator that never appears in the length itself.
+ * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings (including the separator).
  *
  * --- Approach ---
  * 1. **Encode**
- * - Iterate over the input vector.
- * - For each string `s`, append `to_string(s.size())`, then a separator `'/'`, then `s` itself to the result string.
- * - The concatenated result is the encoded single string.
+ * * Initialise an empty `result` string.
+ * * For every string `s` in the input vector:
+ * - Append `to_string(s.size())`, then a special separator (e.g., '`/`'), then the string `s` itself.
+ * * Return the concatenated `result`.
  * 
  * 2. **Decode**
- * - Scan the encoded string from left to right.
- * - Locate the next separator `'/'` to obtain the length prefix.
+ * * Scan the encoded string from left to right.
+ * * For each segment:
+ * - Locate the next separator '`/`' to obtain the length field.
  * - Convert the length substring to an integer `len`.
- * - Extract the next `len` characters as the original string and push it into the answer vector.
- * - Move the cursor past the extracted part and repeat until the whole encoded string is processed.
+ * - The actual string starts right after the separator and spans `len` characters.
+ * - Append this substring to the answer vector and move the cursor past it.
+ * * Continue until the whole encoded string is processed.
+ * 
+ * 3. The separator '`/`' is safe because it never appears inside the numeric length representation, guaranteeing an unambiguous split even when the original strings contain any characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character a constant number of times).
- * Space Complexity: O(N) for the output (the encoded string or the decoded vector). No extra auxiliary space beyond the output is used.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
+ * Space Complexity: O(N) for the output string in encode and for the resulting vector in decode.
  */
 
 #include <iostream>
@@ -46,10 +52,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 10); // small reservation, grows as needed
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // separator that never appears in the length part
+            encoded += '/';               // separator between length and content
             encoded += s;
         }
         return encoded;
@@ -57,18 +66,18 @@ public:
 
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> result;
+        vector<string> decoded;
         size_t i = 0, n = s.size();
+
         while (i < n) {
             // find the separator that ends the length field
-            size_t sep = s.find('/', i);
-            // length substring is [i, sep)
-            int len = stoi(s.substr(i, sep - i));
-            // the actual string starts after the separator
-            size_t start = sep + 1;
-            result.emplace_back(s.substr(start, len));
-            i = start + len; // move to the next encoded block
+            size_t slashPos = s.find('/', i);
+            // (The problem guarantees a valid encoding, so slashPos will always be found)
+            int len = stoi(s.substr(i, slashPos - i));
+            i = slashPos + 1;                     // move past the separator
+            decoded.emplace_back(s.substr(i, len));
+            i += len;                             // move to the start of the next length field
         }
-        return result;
+        return decoded;
     }
 };
