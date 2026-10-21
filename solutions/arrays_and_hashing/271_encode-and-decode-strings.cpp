@@ -7,26 +7,30 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’).
- * During decoding we read the length, skip the separator, then extract exactly that many characters – this works for any possible characters inside the original strings.
+ * Encode each string with its length followed by a unique separator.
+ * During decoding we read the length, skip the separator and extract exactly that many characters – the original string is recovered even if it contains any possible character.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
- * * Return the concatenated result.
+ * * For every string `s` in the input vector, compute `len = s.size()`.
+ * * Append `len`, a delimiter (choose '`:`'), and the string itself to the result.
+ * * The final encoded string is the concatenation of all such blocks.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each token, read digits until the delimiter `'#'` to obtain the length `len`.
- * * Move past `'#'` and take the next `len` characters as the original string, push it into the answer vector.
+ * * Read characters until the delimiter '`:`' – this gives the length `len`.
+ * * Convert the collected digits to an integer.
+ * * Take the next `len` characters as one original string and push it into the answer vector.
  * * Continue until the whole encoded string is processed.
  * 
- * Both steps run in linear time with respect to the total number of characters.
+ * 3. **Edge Cases**
+ * * Empty input list → encode returns an empty string, decode returns an empty vector.
+ * * Empty strings inside the list are handled because their length is `0` (`"0:"`).
+ * * The delimiter is never part of the length field, so any character may appear inside the original strings.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the sum of lengths of all strings (including delimiters).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (both encode and decode scan each character once).
+ * Space Complexity: O(N) for the encoded string and the vector returned by decode.
  */
 
 #include <iostream>
@@ -54,8 +58,8 @@ public:
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '#';          // delimiter that never appears in the length part
-            encoded += s;
+            encoded += ':';               // delimiter between length and content
+            encoded += s;                 // actual string (may be empty)
         }
         return encoded;
     }
@@ -68,13 +72,17 @@ public:
         while (i < n) {
             // read length
             size_t j = i;
-            while (j < n && isdigit(s[j])) ++j;
-            // there must be at least one digit and a '#'
-            long long len = stoll(s.substr(i, j - i));
-            ++j; // skip '#'
-            // extract the original string
-            result.emplace_back(s.substr(j, (size_t)len));
-            i = j + (size_t)len;
+            while (j < n && s[j] != ':') ++j;
+            // j now points to the delimiter
+            long long len = 0;
+            for (size_t k = i; k < j; ++k) {
+                len = len * 10 + (s[k] - '0');
+            }
+            i = j + 1; // move past ':'
+
+            // extract the string of length 'len'
+            result.emplace_back(s.substr(i, (size_t)len));
+            i += (size_t)len;
         }
         return result;
     }
