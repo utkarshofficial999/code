@@ -7,26 +7,26 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing its length and a special separator that never appears in the length representation. During decoding we can read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings, including the separator itself.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’).
+ * During decoding we read the length, skip the separator, then extract exactly that many characters – this works for any possible characters inside the original strings.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter (choose `'#'`), then the string itself to the result.
- * * The delimiter is safe because it never occurs inside the decimal representation of the length.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
+ * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Read characters until the delimiter `'#'` to obtain the length `len`.
- * * Convert the collected characters to an integer.
- * * The next `len` characters form the original string – push it into the answer vector.
+ * * For each token, read digits until the delimiter `'#'` to obtain the length `len`.
+ * * Move past `'#'` and take the next `len` characters as the original string, push it into the answer vector.
  * * Continue until the whole encoded string is processed.
  * 
- * Both functions run in linear time with respect to the total number of characters.
+ * Both steps run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
- * Space Complexity: O(N) for the output string / vector (the algorithm uses only a few auxiliary variables).
+ * Time Complexity:  O(N) where N is the sum of lengths of all strings (including delimiters).
+ * Space Complexity: O(N) for the output of encode and for the vector returned by decode.
  */
 
 #include <iostream>
@@ -49,12 +49,12 @@ public:
     string encode(const vector<string>& strs) {
         string encoded;
         encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
-                                           [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reserve
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '#';               // delimiter
+            encoded += '#';          // delimiter that never appears in the length part
             encoded += s;
         }
         return encoded;
@@ -68,15 +68,13 @@ public:
         while (i < n) {
             // read length
             size_t j = i;
-            while (j < n && s[j] != '#') ++j;
-            // j now points to delimiter
-            string lenStr = s.substr(i, j - i);
-            size_t len = stoull(lenStr);   // length of next string
-            i = j + 1;                     // move past delimiter
-
-            // extract the string of length 'len'
-            result.emplace_back(s.substr(i, len));
-            i += len;                      // move to start of next length field
+            while (j < n && isdigit(s[j])) ++j;
+            // there must be at least one digit and a '#'
+            long long len = stoll(s.substr(i, j - i));
+            ++j; // skip '#'
+            // extract the original string
+            result.emplace_back(s.substr(j, (size_t)len));
+            i = j + (size_t)len;
         }
         return result;
     }
