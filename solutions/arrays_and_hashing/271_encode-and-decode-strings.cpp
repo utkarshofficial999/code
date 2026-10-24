@@ -7,24 +7,26 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). The separator guarantees that the decoder knows exactly where the length ends, so any characters inside the original strings (including digits or ‘/’) do not interfere.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘:’).
+ * During decoding we read the length, skip the separator, and extract exactly that many characters – this works even when the original strings contain any possible characters, including the separator itself.
  *
  * --- Approach ---
  * 1. **Encode**
- * * For every string `str` in the input vector, append `to_string(str.size())`, then a separator `'/'`, then the string itself to the result.
- * * The final concatenated string is returned.
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `':'`, then `s` itself to the result string.
+ * * The concatenated result is returned.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Locate the next separator `'/'` to obtain the length field. Convert this substring to an integer `len`.
- * * The next `len` characters form the original string; push it into the answer vector.
- * * Move the cursor past the extracted string and repeat until the end of the encoded data.
+ * * For each token, read characters until the delimiter `':'` to obtain the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is processed.
  * 
- * Both operations run in linear time with respect to the total number of characters processed.
+ * Both steps run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
+ * Space Complexity: O(N) for the encoded string and the output vector (the algorithm uses only a few auxiliary variables).
  */
 
 #include <iostream>
@@ -41,18 +43,17 @@ using namespace std;
 #include <string>
 #include <vector>
 #include <cstddef>   // for size_t
-#include <cstdlib>   // for std::stoll
+#include <stdexcept> // for std::invalid_argument
 
 class Solution {
 public:
     // Encodes a list of strings to a single string.
     std::string encode(const std::vector<std::string>& strs) {
         std::string encoded;
-        encoded.reserve( (size_t)1e5 ); // optional reserve for large inputs
         for (const auto& s : strs) {
             encoded += std::to_string(s.size());
-            encoded += '/';          // separator that never appears in the length field
-            encoded += s;            // the actual string (may be empty)
+            encoded += ':';               // delimiter that never appears in the length field
+            encoded += s;                 // the actual string (may be empty)
         }
         return encoded;
     }
@@ -60,18 +61,25 @@ public:
     // Decodes a single string to a list of strings.
     std::vector<std::string> decode(const std::string& s) {
         std::vector<std::string> result;
-        size_t i = 0;
-        const size_t n = s.size();
+        std::size_t i = 0;
+        const std::size_t n = s.size();
 
         while (i < n) {
-            // Find the separator that ends the length field
-            size_t slashPos = s.find('/', i);
-            // Extract length substring and convert to integer
-            long long len = std::stoll(s.substr(i, slashPos - i));
-            i = slashPos + 1;               // move past the separator
-            // Extract the original string of length 'len'
-            result.emplace_back(s.substr(i, static_cast<size_t>(len)));
-            i += static_cast<size_t>(len);  // move to the start of the next encoded block
+            // read the length prefix
+            std::size_t len = 0;
+            while (i < n && s[i] != ':') {
+                if (s[i] < '0' || s[i] > '9') {
+                    throw std::invalid_argument("Invalid encoded string");
+                }
+                len = len * 10 + (s[i] - '0');
+                ++i;
+            }
+            // skip the delimiter ':'
+            ++i; // now i points to the first character of the actual string
+
+            // extract the original string of length 'len'
+            result.emplace_back(s.substr(i, len));
+            i += len; // move to the start of the next length field
         }
         return result;
     }
