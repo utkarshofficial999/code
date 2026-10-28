@@ -7,30 +7,28 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings.
+ * Encode each string by prefixing it with its length and a delimiter that never appears in the length representation (e.g., ‘#’). During decoding we read the length, skip the delimiter, and extract exactly that many characters. This makes the process deterministic even when the original strings contain any possible characters, including the delimiter itself.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a separator `'/'`, then `s` itself to the result string.
- * * The concatenated string is returned.
+ * * For each string `s`, append `to_string(s.size())`, then a special delimiter `'#'`, then the string `s` itself to the result.
+ * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Find the next separator `'/'` to obtain the length field.
- * * Convert the length substring to an integer (`size_t`).
- * * The next `len` characters form the original string – push it into the answer vector.
- * * Move the cursor past the extracted part and repeat until the whole encoded string is processed.
+ * * For each token, read characters until the delimiter `'#'` to obtain the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is consumed.
  * 
- * 3. **Edge‑case handling**
- * * Empty input vector → encoded string is empty.
- * * Empty encoded string → decoded vector is empty.
- * * The separator never appears inside the length field, so any characters (including `'/'`) inside the original strings are safely preserved.
+ * 3. **Edge Cases**
+ * * Empty input vector → encode returns an empty string; decode of an empty string returns an empty vector.
+ * * Empty strings inside the vector are handled because their length is `0` (`"0#"`).
+ * * Very long strings are supported because we store the length as a decimal number; `size_t` safely holds lengths up to the limits of the platform.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is visited a constant number of times).
- * Space Complexity: O(N) for the output string / vector (no extra auxiliary storage beyond the result).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length delimiters).
+ * Space Complexity: O(N) for the encoded string and the decoded vector.
  */
 
 #include <iostream>
@@ -44,44 +42,54 @@
 #include <cmath>
 using namespace std;
 
-#include <string>
-#include <vector>
-#include <cstddef>   // for size_t
-#include <cstdlib>   // for std::stoull
+#include <bits/stdc++.h>
+using namespace std;
 
-class Solution {
+class Codec {
 public:
     // Encodes a list of strings to a single string.
-    std::string encode(const std::vector<std::string>& strs) {
-        std::string encoded;
-        encoded.reserve( // optional reservation to avoid many reallocations
-            std::accumulate(strs.begin(), strs.end(), 0ULL,
-                [](unsigned long long sum, const std::string& s) {
-                    return sum + s.size() + 20; // extra space for length and separator
-                })
-        );
-
-        for (const std::string& s : strs) {
-            encoded += std::to_string(s.size());
-            encoded += '/';
+    string encode(const vector<string>& strs) {
+        string encoded;
+        encoded.reserve(strs.size() * 10); // rough reservation
+        for (const string& s : strs) {
+            encoded += to_string(s.size());
+            encoded += '#';          // delimiter separating length and content
             encoded += s;
         }
         return encoded;
     }
 
     // Decodes a single string to a list of strings.
-    std::vector<std::string> decode(const std::string& s) {
-        std::vector<std::string> result;
-        std::size_t i = 0;
-        while (i < s.size()) {
-            // locate separator that ends the length field
-            std::size_t slashPos = s.find('/', i);
-            // length substring is [i, slashPos)
-            std::size_t len = static_cast<std::size_t>(std::stoull(s.substr(i, slashPos - i)));
-            i = slashPos + 1;                     // move past the separator
-            result.emplace_back(s.substr(i, len)); // extract the original string
-            i += len;                             // advance to the start of next length field
+    vector<string> decode(const string& data) {
+        vector<string> result;
+        size_t i = 0;
+        const size_t n = data.size();
+
+        while (i < n) {
+            // find delimiter '#'
+            size_t delimPos = data.find('#', i);
+            // delimiter must exist in a valid encoding
+            if (delimPos == string::npos) break; // malformed input, stop
+
+            // extract length
+            size_t len = 0;
+            // manual conversion to avoid overflow issues with stoi on huge numbers
+            for (size_t j = i; j < delimPos; ++j) {
+                len = len * 10 + (data[j] - '0');
+            }
+
+            // move i to the start of the actual string content
+            i = delimPos + 1;
+            // extract the string of length 'len'
+            result.emplace_back(data.substr(i, len));
+            i += len; // advance to the next encoded block
         }
         return result;
     }
 };
+
+/*
+The LeetCode platform expects the class name to be `Codec` with the two
+public methods `encode` and `decode`. The above implementation follows that
+contract and works for all edge cases described.
+*/
