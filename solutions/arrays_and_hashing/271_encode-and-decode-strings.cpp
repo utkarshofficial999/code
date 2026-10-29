@@ -7,28 +7,28 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string with its length followed by a special separator (e.g., ‘/’). The length tells us exactly where a string ends, so the original content (even if it contains ‘/’) never creates ambiguity. Decoding simply reads the length, skips the separator, and extracts that many characters.
+ * Encode each string by prefixing it with its length and a delimiter that never appears in the length representation. During decoding we can read the length, skip the delimiter, and extract exactly that many characters – this works for any possible characters inside the original strings.
  *
  * --- Approach ---
- * 1. **Encode**
+ * 1. **Encoding**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `'/'`, then `s` itself to the result string.
- * * The final concatenated string is returned.
+ * * For each string `s`, append `to_string(s.size())`, then a special delimiter (e.g., `'#'`), then `s` itself to the result string.
+ * * The delimiter is safe because the length is represented only by digits, never by `'#'`.
  * 
- * 2. **Decode**
+ * 2. **Decoding**
  * * Scan the encoded string from left to right.
- * * For each token, read characters until the delimiter `'/'` to obtain the length `len`.
- * * Convert the length substring to an integer.
- * * Extract the next `len` characters as the original string and push it into the answer vector.
- * * Continue until the whole encoded string is processed.
+ * * For each segment, read characters until the delimiter `'#'` – this substring is the decimal representation of the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Move the cursor past the extracted string and repeat until the end of the encoded string.
  * 
- * 3. **Correctness Guarantees**
- * * The delimiter is placed **after** the length, never inside the length field, so the parser can always locate the separator.
- * * Because we use the exact length, any character (including `'/'`) inside the original string is safely preserved.
+ * 3. **Correctness & Edge Cases**
+ * * Empty strings are encoded as `"0#"` and decoded correctly.
+ * * Strings may contain any character (including `'#'`) because the delimiter is only examined **after** the length field, not inside the payload.
+ * * Use `size_t` (or `uint64_t`) for lengths to avoid overflow; the total length of the encoded string fits in memory because it is exactly the sum of all input characters plus O(N) extra characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the output string in encode and for the resulting vector in decode (aside from the input).
+ * Time Complexity:  O(total_chars) – each character of the input is visited a constant number of times during encoding and decoding.
+ * Space Complexity: O(total_chars) – the encoded string stores all original characters plus a small constant overhead per string.
  */
 
 #include <iostream>
@@ -42,49 +42,43 @@
 #include <cmath>
 using namespace std;
 
-#include <string>
-#include <vector>
-#include <cstddef>   // for size_t
-#include <cstdlib>   // for std::stoll
+#include <bits/stdc++.h>
+using namespace std;
 
 class Solution {
 public:
     // Encodes a list of strings to a single string.
-    std::string encode(const std::vector<std::string>& strs) {
-        std::string encoded;
-        // Reserve an approximate size to reduce reallocations.
-        size_t total_len = 0;
-        for (const auto& s : strs) total_len += s.size() + 20; // extra for length and delimiter
-        encoded.reserve(total_len);
+    string encode(const vector<string>& strs) {
+        string encoded;
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), (size_t)0,
+                                            [](size_t sum, const string& s){ return sum + s.size(); })
+                         + strs.size() * 5 ); // rough reserve
 
-        for (const auto& s : strs) {
-            encoded += std::to_string(s.size());
-            encoded += '/';
+        for (const string& s : strs) {
+            encoded += to_string(s.size());
+            encoded += '#';               // delimiter
             encoded += s;
         }
         return encoded;
     }
 
     // Decodes a single string to a list of strings.
-    std::vector<std::string> decode(const std::string& s) {
-        std::vector<std::string> result;
-        size_t i = 0;
-        const size_t n = s.size();
+    vector<string> decode(const string& s) {
+        vector<string> result;
+        size_t i = 0, n = s.size();
 
         while (i < n) {
-            // Find the delimiter that ends the length field.
-            size_t slashPos = i;
-            while (slashPos < n && s[slashPos] != '/') ++slashPos;
-            // Extract length substring.
-            std::string lenStr = s.substr(i, slashPos - i);
-            // Convert to integer (use long long to be safe for huge strings).
-            long long len = std::stoll(lenStr);
-            // Move index past the delimiter.
-            i = slashPos + 1;
-            // Extract the actual string of length 'len'.
-            result.emplace_back(s.substr(i, static_cast<size_t>(len)));
-            // Advance i past the extracted string.
-            i += static_cast<size_t>(len);
+            // read length
+            size_t j = i;
+            while (j < n && s[j] != '#') ++j;
+            // j now points to delimiter
+            string lenStr = s.substr(i, j - i);
+            size_t len = stoull(lenStr); // safe conversion, works for large lengths
+            i = j + 1;                    // skip delimiter
+
+            // extract the original string of length 'len'
+            result.emplace_back(s.substr(i, len));
+            i += len;                     // move to the start of next encoded block
         }
         return result;
     }
