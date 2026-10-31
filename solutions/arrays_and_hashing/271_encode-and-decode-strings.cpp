@@ -7,30 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a delimiter that cannot appear in the length itself (the delimiter is a non‑digit character). During decoding we read the length, skip the delimiter, and extract exactly that many characters – this works for any possible characters inside the original strings, including empty strings.
+ * Encode each string by prefixing it with its length and a delimiter that never appears in the length representation. During decoding we can read the length, skip the delimiter, and extract exactly that many characters – this works for any possible characters inside the original strings.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Initialise an empty result string.
- * * For every string `str` in the input vector:
- * – Append `to_string(str.size())`.
- * – Append a single delimiter character (e.g., '`/`').
- * – Append the string `str` itself.
- * * Return the concatenated result.
+ * * For every string `str` in the input vector, append `to_string(str.size())`, a single delimiter `'/'`, and then `str` itself to the result string.
+ * * The delimiter is chosen because it never occurs in the decimal representation of the length.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each token:
- * – Read consecutive digits to obtain the length `len`.
- * – The next character must be the delimiter; skip it.
- * – Take the next `len` characters as the original string and push it into the answer vector.
- * – Move the cursor past those `len` characters and repeat until the end of the encoded string.
+ * * Locate the next delimiter `'/'` to obtain the length `len` of the next original string.
+ * * Convert the substring before the delimiter to an integer.
+ * * The original string occupies the next `len` characters; extract it and push it into the answer vector.
+ * * Move the scanning pointer past the extracted part and repeat until the whole encoded string is processed.
  * 
- * 3. The algorithm works for empty strings (`len = 0`) and for any characters inside the original strings because the delimiter is never part of the length field.
+ * 3. Return the encoded string from `encode` and the reconstructed vector from `decode`.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (each character is processed a constant number of times).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode (the algorithm itself uses only O(1) auxiliary space).
+ * Time Complexity:  
+ * Space Complexity: 
  */
 
 #include <iostream>
@@ -54,11 +49,11 @@ public:
         string encoded;
         encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
                                             [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reservation
+                         + strs.size()*5 ); // rough reserve
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';               // delimiter (non‑digit)
+            encoded += '/';          // delimiter between length and content
             encoded += s;
         }
         return encoded;
@@ -70,24 +65,24 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // read length
-            size_t len = 0;
-            while (i < n && isdigit(s[i])) {
-                len = len * 10 + (s[i] - '0');
-                ++i;
-            }
-            // skip delimiter
-            if (i >= n || s[i] != '/') {
-                // malformed input – in LeetCode this never happens,
-                // but we guard against it.
-                break;
-            }
-            ++i; // move past '/'
+            // find delimiter '/'
+            size_t slashPos = s.find('/', i);
+            // It must exist in a valid encoding
+            if (slashPos == string::npos) break; // malformed input, safeguard
 
-            // extract the original string of length 'len'
-            string cur = s.substr(i, len);
-            result.push_back(std::move(cur));
-            i += len;
+            // length of the next string
+            size_t len = 0;
+            // convert substring [i, slashPos) to integer
+            for (size_t j = i; j < slashPos; ++j) {
+                len = len * 10 + (s[j] - '0');
+            }
+
+            // extract the actual string
+            size_t start = slashPos + 1;
+            result.emplace_back(s.substr(start, len));
+
+            // move i to the start of the next encoded block
+            i = start + len;
         }
         return result;
     }
