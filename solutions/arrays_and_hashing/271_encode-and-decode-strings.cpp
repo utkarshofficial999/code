@@ -7,25 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string with its length followed by a delimiter that never appears in the length itself (e.g., ‘#’). The decoder can read the length, skip the delimiter, and extract exactly that many characters, guaranteeing correct reconstruction even when the original strings contain any characters, including the delimiter.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). Because the length tells us exactly how many characters belong to the original string, the separator can never be ambiguous, even if the original string itself contains ‘/’.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a special delimiter `'#'`, then `s` itself to the result string.
- * * The final concatenated string is returned.
+ * * For each string `s`, append `to_string(s.size())`, then a single delimiter `'/'`, then the string itself to a result `std::string`.
+ * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Read characters until the delimiter `'#'` is found – this substring represents the length `len`.
+ * * Read characters until the delimiter `'/'` is found – this substring is the length `len`.
  * * Convert `len` to an integer, then take the next `len` characters as the original string.
- * * Append the extracted string to the answer vector and continue until the whole encoded string is processed.
+ * * Append the recovered string to the answer vector and continue until the whole encoded string is processed.
  * 
- * Both steps run in linear time with respect to the total number of characters.
+ * Both operations run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(total_chars) – each character is visited a constant number of times during encoding and decoding.
- * Space Complexity: O(total_chars) – the encoded string and the output vector together store all characters.
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (both for encoding and decoding).
+ * Space Complexity: O(N) for the output string in encode and for the output vector in decode.
  */
 
 #include <iostream>
@@ -53,7 +53,7 @@ public:
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '#';          // delimiter separating length and content
+            encoded += '/';
             encoded += s;
         }
         return encoded;
@@ -65,14 +65,16 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // find delimiter '#'
-            size_t j = i;
-            while (j < n && s[j] != '#') ++j;
-            // substring [i, j) is the length
-            size_t len = stoull(s.substr(i, j - i));
-            // move past '#'
-            i = j + 1;
-            // extract the original string of length 'len'
+            // find delimiter '/'
+            size_t slashPos = s.find('/', i);
+            // safety check – malformed input should not happen in LeetCode tests
+            if (slashPos == string::npos) break;
+
+            // length of the next string
+            size_t len = stoull(s.substr(i, slashPos - i));
+            i = slashPos + 1; // move past '/'
+
+            // extract the string of length 'len'
             decoded.emplace_back(s.substr(i, len));
             i += len;
         }
