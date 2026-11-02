@@ -7,25 +7,29 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a fixed separator. Knowing the exact length lets us read the original string even if it contains the separator character, guaranteeing a loss‑less round‑trip.
+ * Encode each string by prefixing its length and a special separator (e.g., ‘/’).
+ * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings, including the separator itself.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, a separator (e.g., `':'`), and then `s` itself to the result string.
- * * Return the concatenated result.
+ * * For each string `s`, append `to_string(s.size())`, then a single delimiter `'/'`, then `s` itself to the result string.
+ * * The delimiter is guaranteed to appear **after** the length, so the length can be parsed unambiguously.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each segment, read characters until the separator `':'` to obtain the length `len`.
- * * Convert `len` to an integer, then extract the next `len` characters as the original string.
- * * Continue until the end of the encoded string and collect all extracted strings in a vector.
+ * * For each token, read characters until the delimiter `'/'` – this substring is the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is consumed.
  * 
- * Both operations run in linear time with respect to the total number of characters.
+ * 3. **Edge Cases**
+ * * Empty input list → encode returns an empty string; decode of an empty string returns an empty vector.
+ * * Empty strings inside the list are handled because their length is `0` (`"0/"`).
+ * * The algorithm works for any characters (including `'/'`) inside the original strings because the length tells us exactly where each string ends.
  *
  * --- Complexity ---
  * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
- * Space Complexity: O(N) for the output string in encode and for the resulting vector in decode.
+ * Space Complexity: O(N) for the encoded string and the decoded vector.
  */
 
 #include <iostream>
@@ -44,46 +48,33 @@ using namespace std;
 
 class Solution {
 public:
-    // Encode a list of strings to a single string.
+    // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size() * 5 ); // rough reservation
-
+        encoded.reserve(strs.size() * 5); // rough reservation
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += ':';               // separator that never appears in the length field
-            encoded += s;                 // the actual string (may be empty)
+            encoded += '/';          // delimiter separating length and content
+            encoded += s;
         }
         return encoded;
     }
 
-    // Decode a single string to a list of strings.
+    // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> result;
+        vector<string> decoded;
         size_t i = 0, n = s.size();
-
         while (i < n) {
-            // find separator to get the length
-            size_t sep = s.find(':', i);
-            // malformed input guard (should not happen in LeetCode tests)
-            if (sep == string::npos) break;
-
-            // length substring [i, sep)
-            size_t len = 0;
-            for (size_t j = i; j < sep; ++j) {
-                len = len * 10 + (s[j] - '0');
-            }
-
-            // extract the string of length 'len' after the separator
-            size_t start = sep + 1;
-            string cur = s.substr(start, len);
-            result.push_back(std::move(cur));
-
-            // move index to the beginning of the next encoded block
-            i = start + len;
+            // find delimiter '/'
+            size_t slashPos = s.find('/', i);
+            // safety check – malformed input (should not happen in LeetCode)
+            if (slashPos == string::npos) break;
+            // length substring
+            size_t len = stoull(s.substr(i, slashPos - i));
+            i = slashPos + 1; // move past '/'
+            decoded.emplace_back(s.substr(i, len));
+            i += len; // move to start of next length field
         }
-        return result;
+        return decoded;
     }
 };
