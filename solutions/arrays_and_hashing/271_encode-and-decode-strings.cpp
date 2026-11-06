@@ -7,29 +7,28 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing its length and a special separator (e.g., ‘/’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – this works even if the original string contains any possible character.
+ * Encode each string by prefixing it with its length and a separator that never appears in the length itself. During decoding we can read the length, skip the separator, and extract exactly that many characters – guaranteeing a loss‑less round‑trip even for empty strings or strings containing any characters.
  *
  * --- Approach ---
- * 1. **Encode**
- * * For every string `s` in the input vector:
- * – Append `to_string(s.size())` → the length.
- * – Append a delimiter character `'/'`.
- * – Append the string `s` itself.
- * * Concatenate all parts into one big string and return it.
+ * 1. **Encoding**
+ * * Initialise an empty result string.
+ * * For every string `str` in the input vector, append `to_string(str.size())`, a special separator (e.g., '`/`'), and then `str` itself.
+ * * Return the concatenated result.
  * 
- * 2. **Decode**
+ * 2. **Decoding**
  * * Scan the encoded string from left to right.
- * * Read characters until the delimiter `'/'` is found – this substring is the length `len`.
- * * Convert `len` to an integer.
- * * The next `len` characters form the original string; push it into the result vector.
- * * Move the cursor past those `len` characters and repeat until the end of the encoded string.
+ * * Locate the next separator '`/`' to obtain the length of the upcoming original string.
+ * * Convert the substring before the separator to an integer `len`.
+ * * The original string occupies the next `len` characters; extract it and push it into the answer vector.
+ * * Move the cursor past the extracted part and repeat until the whole encoded string is processed.
  * 
- * 3. The delimiter `'/'` is safe because the length field is numeric, so `'/'` can never appear inside it.
+ * 3. **Edge Cases**
+ * * Empty input list → encode returns an empty string; decode of an empty string returns an empty vector.
+ * * Empty strings inside the list are handled because their length is `0` and we still store the separator.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (each character is processed a constant number of times).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode (the algorithm itself uses only O(1) auxiliary space).
+ * Time Complexity:  O(total number of characters) for both encode and decode.
+ * Space Complexity: O(total number of characters) for the encoded string and the output vector.
  */
 
 #include <iostream>
@@ -57,7 +56,7 @@ public:
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // delimiter between length and content
+            encoded += '/';          // separator that never appears in the length
             encoded += s;
         }
         return encoded;
@@ -69,15 +68,14 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // find delimiter '/'
+            // find separator '/'
             size_t slashPos = s.find('/', i);
-            // length substring is [i, slashPos)
+            // slashPos must exist because encode always adds it
             size_t len = stoull(s.substr(i, slashPos - i));
             i = slashPos + 1;               // move past '/'
 
-            // extract the original string of length 'len'
             result.emplace_back(s.substr(i, len));
-            i += len;                       // move to the start of next length field
+            i += len;                       // skip the extracted string
         }
         return result;
     }
