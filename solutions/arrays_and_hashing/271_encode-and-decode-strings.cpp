@@ -7,27 +7,24 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing its length and a special separator (e.g., ‘#’). During decoding we read the length, skip the separator, and extract exactly that many characters. The length prefix removes any ambiguity caused by characters that may also appear in the original strings.
+ * Encode each string with its length followed by a special separator. Because the length is known before reading the actual characters, any character (including the separator) can safely appear inside the original strings.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
- * * Return the concatenated result.
+ * * For every string `str` in the input vector, append `to_string(str.size())`, a delimiter (chosen as '`/`'), and then `str` itself to the result string.
+ * * The delimiter is only used to locate where the length token ends; the actual string content is taken exactly `len` characters after it, so the delimiter may appear inside the string without ambiguity.
  * 
  * 2. **Decode**
- * * Scan the encoded string `s` from left to right.
- * * For each segment, read characters until the delimiter `'#'` to obtain the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the output vector.
- * * Continue until the whole encoded string is processed.
+ * * Scan the encoded string from left to right.
+ * * Read characters until the delimiter '`/`' to obtain the length `len`.
+ * * Convert the length token to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is consumed.
  * 
- * 3. **Correctness Guarantees**
- * * The delimiter `'#'` never appears inside the length field (it consists only of digits).
- * * The exact length tells us where the next string starts, so any character (including `'#'`) inside the original strings is safely handled.
+ * Both operations run in linear time with respect to the total number of characters processed.
  *
  * --- Complexity ---
- * Time Complexity:  O(total_chars) – each character of the input strings is visited once during encoding and once during decoding.
- * Space Complexity: O(total_chars) – the encoded string stores all characters plus a small constant‑size overhead per original string.
+ * Time Complexity:  O(N) where N is the sum of lengths of all strings (including delimiters added during encoding).
+ * Space Complexity: O(N) for the encoded string and the output vector during decoding.
  */
 
 #include <iostream>
@@ -41,44 +38,65 @@
 #include <cmath>
 using namespace std;
 
-#include <bits/stdc++.h>
-using namespace std;
+#include <string>
+#include <vector>
+#include <cstddef>   // for size_t
+#include <cstdlib>   // for std::stoll
+#include <stdexcept>
 
 class Solution {
 public:
     // Encodes a list of strings to a single string.
-    string encode(const vector<string>& strs) {
-        string encoded;
-        encoded.reserve( (size_t) accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size() * 5 ); // rough reserve to avoid many reallocations
-        for (const string& s : strs) {
-            encoded += to_string(s.size());
-            encoded += '#';          // delimiter between length and string
+    std::string encode(const std::vector<std::string>& strs) {
+        std::string encoded;
+        encoded.reserve(estimateSize(strs));
+        for (const auto& s : strs) {
+            encoded += std::to_string(s.size());
+            encoded += '/';               // delimiter
             encoded += s;
         }
         return encoded;
     }
 
     // Decodes a single string to a list of strings.
-    vector<string> decode(const string& s) {
-        vector<string> result;
-        size_t i = 0, n = s.size();
+    std::vector<std::string> decode(const std::string& s) {
+        std::vector<std::string> result;
+        std::size_t i = 0;
+        const std::size_t n = s.size();
+
         while (i < n) {
-            // find delimiter '#'
-            size_t j = i;
-            while (j < n && s[j] != '#') ++j;
-            // substring [i, j) holds the length
-            long long len = 0;
-            for (size_t k = i; k < j; ++k) {
-                len = len * 10 + (s[k] - '0');   // safe because length fits in 64‑bit
+            // Find delimiter to extract length
+            std::size_t delimPos = s.find('/', i);
+            if (delimPos == std::string::npos) {
+                throw std::invalid_argument("Invalid encoded string");
             }
-            // move past '#'
-            i = j + 1;
-            // extract the original string of length 'len'
-            result.emplace_back(s.substr(i, static_cast<size_t>(len)));
-            i += static_cast<size_t>(len);
+
+            // Parse length
+            std::string lenStr = s.substr(i, delimPos - i);
+            std::size_t len = static_cast<std::size_t>(std::stoll(lenStr));
+
+            // Extract the actual string
+            std::size_t start = delimPos + 1;
+            if (start + len > n) {
+                throw std::invalid_argument("Invalid encoded string");
+            }
+            result.emplace_back(s.substr(start, len));
+
+            // Move index to the next encoded segment
+            i = start + len;
         }
         return result;
+    }
+
+private:
+    // Helper to reserve enough space for the encoded string (optional optimization)
+    static std::size_t estimateSize(const std::vector<std::string>& strs) {
+        std::size_t total = 0;
+        for (const auto& s : strs) {
+            total += std::to_string(s.size()).size(); // digits of length
+            total += 1;                               // delimiter
+            total += s.size();                         // actual characters
+        }
+        return total;
     }
 };
