@@ -7,26 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing its length and a special separator that never appears in the length representation. During decoding we read the length, skip the separator, and extract exactly that many characters. This makes the process linear and immune to any characters that may be present inside the original strings.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’).
+ * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings, including the separator itself.
  *
  * --- Approach ---
- * 1. **Encoding**
+ * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, a delimiter (e.g., '`/`'), and then `s` itself to the result string.
- * * The delimiter is chosen because it never occurs in the decimal representation of a length, guaranteeing an unambiguous split.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
+ * * The concatenated result is returned.
  * 
- * 2. **Decoding**
+ * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each segment, read characters until the delimiter '`/`' to obtain the length `len`.
+ * * For each token, read characters until the delimiter `'#'` – this substring is the length `len`.
  * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
- * * Move the cursor past the extracted string and repeat until the whole encoded string is processed.
+ * * Continue until the whole encoded string is consumed.
  * 
- * 3. **Correctness Guarantees**
- * * The length prefix uniquely determines where each original string ends, regardless of its content.
- * * The algorithm works for empty strings, strings containing delimiters, and very large inputs because it never relies on any sentinel characters inside the payload.
+ * Both functions run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length prefixes).
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
  * Space Complexity: O(N) for the encoded string and the vector produced by decode.
  */
 
@@ -49,10 +48,10 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 10); // rough reservation to reduce reallocations
+        encoded.reserve(strs.size() * 10); // rough reservation
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';               // delimiter that never appears in the length
+            encoded += '#';          // delimiter that never appears in the length part
             encoded += s;
         }
         return encoded;
@@ -60,28 +59,21 @@ public:
 
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> result;
+        vector<string> decoded;
         size_t i = 0, n = s.size();
         while (i < n) {
-            // find the delimiter that ends the length field
-            size_t slashPos = s.find('/', i);
-            // safety check – the input is guaranteed to be produced by encode()
-            if (slashPos == string::npos) break;
-
-            // extract length
-            size_t len = 0;
-            // manual conversion avoids extra string allocation
-            for (size_t j = i; j < slashPos; ++j) {
-                len = len * 10 + (s[j] - '0');
-            }
-
-            // move cursor to the start of the actual string
-            i = slashPos + 1;
-            // extract the original string of length 'len'
-            result.emplace_back(s.substr(i, len));
-            // advance cursor past the extracted string
-            i += len;
+            // find delimiter '#'
+            size_t delim = s.find('#', i);
+            // safety check – malformed input should not happen in LeetCode tests
+            if (delim == string::npos) break;
+            // length of the next string
+            size_t len = stoull(s.substr(i, delim - i));
+            // extract the string of that length
+            size_t start = delim + 1;
+            decoded.emplace_back(s.substr(start, len));
+            // move index past the extracted string
+            i = start + len;
         }
-        return result;
+        return decoded;
     }
 };
