@@ -7,27 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing its length and a special separator (e.g., ‘/’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – this works even if the original strings contain any possible characters.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). Because the length is written in decimal, the separator can never be confused with the length itself, allowing us to recover the original strings unambiguously even if they contain any characters.
  *
  * --- Approach ---
- * 1. **Encoding**
- * * For every string `str` in the input vector, append `to_string(str.size())`, then a delimiter `'/'`, then the string itself to the result.
- * * Concatenating all such blocks yields a single encoded string.
+ * 1. **Encode**
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a separator `'/'`, then `s` itself to the result string.
+ * * The concatenated result is returned.
  * 
- * 2. **Decoding**
+ * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Read characters until the delimiter `'/'` – this substring is the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string.
- * * Advance the cursor past the extracted part and repeat until the whole encoded string is processed.
+ * * For each segment, read characters until the separator `'/'` – this gives the length `len` of the next original string.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Move the cursor past the extracted part and repeat until the whole encoded string is processed.
  * 
- * 3. **Correctness Guarantees**
- * * The delimiter is never part of the length field, so the boundary between length and data is unambiguous.
- * * Because we know the exact length of each original string, any characters (including `'/'`) inside the string are safely preserved.
+ * Both operations touch each character exactly once, giving linear time.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the output string / vector (the algorithm uses only a few auxiliary variables besides the required output).
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
+ * Space Complexity: O(N) for the output of encode and for the vector returned by decode (the algorithm itself uses only O(1) auxiliary space).
  */
 
 #include <iostream>
@@ -44,16 +42,15 @@ using namespace std;
 #include <bits/stdc++.h>
 using namespace std;
 
-/*
- * LeetCode 271 – Encode and Decode Strings
- * The codec uses length-prefixed encoding with '/' as a separator.
- */
-class Codec {
+class Solution {
 public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(estimateSize(strs));
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
             encoded += '/';
@@ -66,39 +63,21 @@ public:
     vector<string> decode(const string& s) {
         vector<string> result;
         size_t i = 0, n = s.size();
+
         while (i < n) {
-            // find delimiter '/'
-            size_t slashPos = s.find('/', i);
-            // sanity check – the input is guaranteed to be produced by encode()
-            if (slashPos == string::npos) break;
+            // find the separator '/'
+            size_t slash = s.find('/', i);
+            // safety check – malformed input (should not happen in LeetCode)
+            if (slash == string::npos) break;
+
             // length of the next string
-            size_t len = stoull(s.substr(i, slashPos - i));
-            // extract the string of that length
-            size_t start = slashPos + 1;
-            result.emplace_back(s.substr(start, len));
-            // move cursor forward
-            i = start + len;
+            size_t len = stoull(s.substr(i, slash - i));
+            i = slash + 1; // move past '/'
+
+            // extract the string of length 'len'
+            result.emplace_back(s.substr(i, len));
+            i += len; // move to the start of the next length field
         }
         return result;
     }
-
-private:
-    // Helper to reserve enough space for the encoded string (optional optimisation)
-    static size_t estimateSize(const vector<string>& strs) {
-        size_t total = 0;
-        for (const auto& s : strs) {
-            total += s.size();                 // the string itself
-            total += to_string(s.size()).size(); // length digits
-            total += 1;                        // separator '/'
-        }
-        return total;
-    }
-};
-
-/*
- * The platform expects a class named Solution; we simply expose the same
- * interface through inheritance to satisfy both possible signatures.
- */
-class Solution : public Codec {
-    // No extra code needed – inherits encode/decode.
 };
