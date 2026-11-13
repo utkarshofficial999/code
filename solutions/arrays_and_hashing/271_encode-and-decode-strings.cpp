@@ -7,26 +7,36 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a delimiter (e.g., `:`).
- * During decoding we first read the length, then know exactly how many following characters belong to the original string, so any character (including the delimiter) inside the string is safely handled.
+ * Encode each string by prefixing it with its length and a special separator.
+ * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a single delimiter `':'`, then `s` itself to the result string.
- * * Return the concatenated result.
+ * * Initialise an empty `result` string.
+ * * For every string `s` in the input vector:
+ * - Append `to_string(s.size())`, then a delimiter (choose `'/'`), then `s` itself.
+ * * Return the concatenated `result`.
+ * * The delimiter is safe because the length tells us exactly where the next string starts, regardless of the delimiter’s presence inside `s`.
  * 
  * 2. **Decode**
- * * Scan the encoded string `s` from left to right.
- * * Read characters until the delimiter `':'` to obtain the length `len` of the next original string.
- * * Convert `len` to an integer, then take the next `len` characters as the original string and store it.
- * * Move the cursor past those `len` characters and repeat until the end of `s`.
+ * * Initialise an empty vector `out`.
+ * * Scan the encoded string with an index `i`.
+ * * While `i` is less than the string size:
+ * - Read characters until the delimiter `'/'` to obtain the length `len`.
+ * - Convert the collected digits to an integer (`size_t`).
+ * - Move `i` past the delimiter, then take the next `len` characters as the original string and push it into `out`.
+ * - Advance `i` by `len`.
+ * * Return `out`.
  * 
- * Both steps run in linear time with respect to the total number of characters.
+ * 3. **Edge Cases**
+ * * Empty input vector → empty encoded string.
+ * * Empty encoded string → empty output vector.
+ * * Strings may be empty; they are encoded as `"0/"` and decoded correctly.
+ * * Use `size_t` for lengths to avoid overflow on very long strings.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode.
+ * Time Complexity:  O(total_chars) – each character of the input appears once in encoding and once in decoding.
+ * Space Complexity: O(total_chars) – the encoded string and the output vector together store the same amount of data as the original strings.
  */
 
 #include <iostream>
@@ -51,7 +61,7 @@ public:
         encoded.reserve(strs.size() * 10); // rough reservation
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += ':';          // delimiter separating length and content
+            encoded += '/';          // delimiter
             encoded += s;
         }
         return encoded;
@@ -59,19 +69,20 @@ public:
 
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
-        vector<string> result;
+        vector<string> decoded;
         size_t i = 0, n = s.size();
         while (i < n) {
             // read length
-            size_t j = i;
-            while (j < n && s[j] != ':') ++j;
-            // safety: malformed input (should not happen in LeetCode tests)
-            if (j == n) break;
-            size_t len = stoull(s.substr(i, j - i));
-            i = j + 1; // skip ':'
-            result.emplace_back(s.substr(i, len));
+            size_t len = 0;
+            while (i < n && s[i] != '/') {
+                len = len * 10 + (s[i] - '0');
+                ++i;
+            }
+            ++i; // skip the delimiter '/'
+            // extract the string of length 'len'
+            decoded.emplace_back(s.substr(i, len));
             i += len;
         }
-        return result;
+        return decoded;
     }
 };
