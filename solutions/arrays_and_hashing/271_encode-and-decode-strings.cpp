@@ -7,25 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’). Because the length tells us exactly how many characters belong to the next string, the original strings can contain any character, including the separator itself.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘#’). Because the length tells us exactly how many characters belong to the original string, the separator can never be ambiguous even if the original string itself contains ‘#’.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `w`, append `to_string(w.size())`, then a delimiter `'#'`, then the string itself to the result.
- * * The concatenated result is the encoded single string.
+ * * For each string `t`, append `to_string(t.size())`, then a single character `'#'`, then `t` itself to the result string.
+ * * The concatenated result is returned.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each segment, read characters until the delimiter `'#'` to obtain the length `len`.
- * * Convert `len` to an integer, then extract the next `len` characters as the original string.
- * * Continue until the whole encoded string is processed.
+ * * For each token, read characters until the separator `'#'` to obtain the length `len`.
+ * * Convert `len` from string to integer, then take the next `len` characters as the original string.
+ * * Append the recovered string to the answer vector and continue until the whole encoded string is processed.
  * 
  * Both operations run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined.
- * Space Complexity: O(N) for the output of encode and the vector returned by decode (the algorithm itself uses only O(1) extra space).
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (both encode and decode).
+ * Space Complexity: O(N) for the output string in encode and for the output vector in decode (aside from the input).
  */
 
 #include <iostream>
@@ -47,10 +47,9 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        // Reserve approximate size to avoid many reallocations
-        size_t total = 0;
-        for (const auto& s : strs) total += s.size() + 10; // extra for length and '#'
-        encoded.reserve(total);
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), (size_t)0,
+                                            [](size_t sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reserve
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
@@ -66,16 +65,15 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // Find delimiter '#'
+            // read length
             size_t j = i;
             while (j < n && s[j] != '#') ++j;
-            // Extract length
-            size_t len = 0;
-            // stoi on substring is safe because we know it contains only digits
-            len = static_cast<size_t>(stoll(s.substr(i, j - i)));
-            // Move past '#'
-            i = j + 1;
-            // Extract the original string of length 'len'
+            // j now points to '#'
+            string lenStr = s.substr(i, j - i);
+            size_t len = stoull(lenStr);   // use unsigned long long to avoid overflow
+            i = j + 1;                      // skip '#'
+
+            // extract the original string of length len
             result.emplace_back(s.substr(i, len));
             i += len;
         }
