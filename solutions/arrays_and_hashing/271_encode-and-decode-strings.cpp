@@ -7,28 +7,29 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a delimiter.
- * During decoding we first read the length (stopping at the delimiter), then extract exactly that many characters – this works for any possible characters inside the original strings, including the delimiter itself.
+ * Encode each string by prefixing it with its length and a non‑numeric separator.
+ * During decoding we first read the length (digits until the separator), then extract exactly that many characters – this works even if the original strings contain any possible characters.
  *
  * --- Approach ---
- * 1. **Encode**
- * * For every string `s` in the input vector, append `to_string(s.size())`, a special delimiter `'/'`, and then `s` itself to the result string.
- * * The delimiter is chosen only to separate the length from the payload; the payload can contain any character because we never rely on it for parsing.
+ * 1. **Encoding**
+ * * For every string `s` in the input vector, append `to_string(s.size())`, a special separator (e.g., `'#'`), and the string itself to the result.
+ * * The separator is chosen to be a character that never appears in the length representation (digits only), so it can be safely used to locate the end of the length field.
  * 
- * 2. **Decode**
+ * 2. **Decoding**
  * * Scan the encoded string from left to right.
- * * Locate the next delimiter `'/'` to obtain the length of the next original string.
- * * Convert the length substring to an integer (using a manual parser to avoid overflow).
- * * Extract the next `len` characters as the original string, push it into the answer vector, and continue from the position after those characters.
+ * * Read characters until the separator `'#'` – this substring is the length `len`.
+ * * Convert `len` to an integer (`stoll` to avoid overflow).
+ * * The next `len` characters form the original string; push it into the answer vector.
+ * * Move the cursor past those `len` characters and repeat until the whole encoded string is processed.
  * 
  * 3. **Edge Cases**
  * * Empty input vector → encoded string is empty.
- * * Empty strings inside the vector → encoded as `"0/"` and correctly decoded to `""`.
- * * Very long strings → length is stored as decimal digits; parsing uses `size_t` which can hold the full length on 64‑bit platforms.
+ * * Empty encoded string → decoded vector is empty.
+ * * Strings may be empty, contain digits, the separator, or any other ASCII/Unicode characters – the length‑prefix guarantees correct reconstruction.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (including the extra digits for lengths).
- * Space Complexity: O(N) for the encoded string and the output vector during decoding.
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is visited a constant number of times during encode and decode).
+ * Space Complexity: O(N) for the output of both functions (the encoded string or the vector of decoded strings).
  */
 
 #include <iostream>
@@ -52,11 +53,11 @@ public:
         string encoded;
         encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
                                             [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reserve
+                         + strs.size()*5 ); // rough reservation
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // delimiter between length and string
+            encoded += '#';          // separator (non‑digit)
             encoded += s;
         }
         return encoded;
@@ -68,18 +69,16 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // parse length
-            size_t len = 0;
-            while (i < n && s[i] != '/') {
-                // digit character guaranteed by encode
-                len = len * 10 + (s[i] - '0');
-                ++i;
-            }
-            ++i; // skip the delimiter '/'
+            // find separator '#'
+            size_t j = i;
+            while (j < n && s[j] != '#') ++j;
+            // length substring is s[i..j-1]
+            long long len = stoll(s.substr(i, j - i));
+            i = j + 1; // move past '#'
 
-            // extract the original string of length 'len'
-            result.emplace_back(s.substr(i, len));
-            i += len;
+            // extract the original string of length len
+            result.emplace_back(s.substr(i, (size_t)len));
+            i += (size_t)len;
         }
         return result;
     }
