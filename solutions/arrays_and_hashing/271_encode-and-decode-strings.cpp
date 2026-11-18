@@ -7,27 +7,27 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a separator that never appears in the length representation. During decoding we can read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings.
+ * Encode each string by prefixing its length followed by a delimiter that never appears in the length representation (e.g., ‘#’). During decoding we can read the length, skip the delimiter and extract exactly that many characters – no matter what characters the original strings contain.
  *
  * --- Approach ---
- * 1. **Encoding**
- * * For every string `s` in the input vector, append `to_string(s.size())`, a special separator (e.g., '`/`'), and then `s` itself to the result string.
- * * The separator is chosen because it never occurs in the decimal representation of the length, guaranteeing an unambiguous split.
+ * 1. **Encode**
+ * * Iterate over the input vector `strs`.
+ * * For each string `s` append `to_string(s.size())`, then a delimiter `'#'`, then `s` itself to the result string.
+ * * Return the concatenated result.
  * 
- * 2. **Decoding**
- * * Scan the encoded string from left to right.
- * * Locate the next separator '`/`' to obtain the length `len` of the upcoming original string.
- * * Convert the substring before the separator to an integer.
- * * Move the cursor past the separator and read exactly `len` characters – this is one original string.
- * * Repeat until the whole encoded string is consumed.
+ * 2. **Decode**
+ * * Scan the encoded string `s` from left to right.
+ * * For each segment, read characters until the delimiter `'#'` – this substring is the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
+ * * Continue until the whole encoded string is processed.
  * 
  * 3. **Edge Cases**
- * * Empty input vector → encode returns an empty string; decode of an empty string returns an empty vector.
- * * Strings may be empty, contain any characters (including the separator) – the length prefix protects us from ambiguity.
+ * * Empty input vector → encode returns an empty string, decode of an empty string returns an empty vector.
+ * * Strings may contain any characters (including ‘#’) because the delimiter separates the length from the content, not the content itself.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the encoded string and the output vector (no extra auxiliary structures beyond the result).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (each character is visited a constant number of times).
+ * Space Complexity: O(N) for the encoded string and the decoded vector (output space).
  */
 
 #include <iostream>
@@ -49,13 +49,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+        encoded.reserve( (size_t) accumulate(strs.begin(), strs.end(), 0LL,
                                             [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size()*5 ); // rough reservation
+                         + strs.size()*5 ); // rough reserve
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // separator that never appears in the length
+            encoded += '#';          // delimiter separating length and content
             encoded += s;
         }
         return encoded;
@@ -67,19 +67,23 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // find separator '/'
-            size_t slashPos = s.find('/', i);
-            // slashPos must exist in a valid encoding
-            if (slashPos == string::npos) break; // malformed input, safety guard
+            // find delimiter '#'
+            size_t delimPos = s.find('#', i);
+            // safety: if not found, malformed input – break
+            if (delimPos == string::npos) break;
 
-            // length of the next original string
-            size_t len = stoull(s.substr(i, slashPos - i));
+            // length substring [i, delimPos)
+            size_t len = 0;
+            for (size_t j = i; j < delimPos; ++j) {
+                len = len * 10 + (s[j] - '0');
+            }
 
-            // start of the actual string
-            size_t start = slashPos + 1;
-            result.emplace_back(s.substr(start, len));
+            // extract the actual string of length 'len'
+            size_t start = delimPos + 1;
+            string cur = s.substr(start, len);
+            result.push_back(std::move(cur));
 
-            // move cursor to the next encoded block
+            // move index to the start of the next encoded block
             i = start + len;
         }
         return result;
