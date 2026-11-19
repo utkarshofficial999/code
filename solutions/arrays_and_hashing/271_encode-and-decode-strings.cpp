@@ -7,26 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a special separator (e.g., ‘:’).
- * During decoding we read the length, skip the separator, and extract exactly that many characters – this works for any possible characters inside the original strings.
+ * Encode each string by prefixing it with its length and a special separator (e.g., ‘/’). Since the length consists only of digits, the separator can never be confused with the length itself, allowing us to parse the concatenated stream unambiguously even when the original strings contain any characters.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `':'`, then the string itself to a result `std::string`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'/'`, then `s` itself to a result string.
  * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each token, read characters until the delimiter `':'` to obtain the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string and push it into the answer vector.
- * * Continue until the whole encoded string is processed.
+ * * Read characters until the delimiter `'/'` to obtain the length `len` of the next original string.
+ * * Convert the collected digits to an integer, then extract the next `len` characters as the original string.
+ * * Append the extracted string to the answer vector and continue until the whole encoded string is processed.
  * 
- * Both steps run in linear time with respect to the total number of characters.
+ * Both operations run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
- * Space Complexity: O(N) for the encoded string and the decoded vector (output space).
+ * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including delimiters).
+ * Space Complexity: O(N) for the output of encode and for the vector returned by decode (the algorithm itself uses only O(1) auxiliary space).
  */
 
 #include <iostream>
@@ -40,38 +39,47 @@
 #include <cmath>
 using namespace std;
 
-#include <bits/stdc++.h>
-using namespace std;
+#include <string>
+#include <vector>
+#include <cstddef>   // for size_t
+#include <cstdlib>   // for std::stoi
 
 class Solution {
 public:
     // Encodes a list of strings to a single string.
-    string encode(const vector<string>& strs) {
-        string encoded;
-        encoded.reserve(strs.size() * 10); // rough reservation
-        for (const string& s : strs) {
-            encoded += to_string(s.size());
-            encoded += ':';          // delimiter that never appears in the length field
+    std::string encode(const std::vector<std::string>& strs) {
+        std::string encoded;
+        // Reserve an approximate size to avoid many reallocations.
+        size_t total_len = 0;
+        for (const auto& s : strs) total_len += s.size() + 20; // extra for length and delimiter
+        encoded.reserve(total_len);
+
+        for (const auto& s : strs) {
+            encoded += std::to_string(s.size());
+            encoded += '/';          // delimiter that never appears in the length part
             encoded += s;
         }
         return encoded;
     }
 
     // Decodes a single string to a list of strings.
-    vector<string> decode(const string& s) {
-        vector<string> result;
-        size_t i = 0, n = s.size();
+    std::vector<std::string> decode(const std::string& s) {
+        std::vector<std::string> result;
+        size_t i = 0;
+        const size_t n = s.size();
+
         while (i < n) {
-            // find delimiter ':'
-            size_t delim = s.find(':', i);
-            // safety check – malformed input should not happen in LeetCode tests
-            if (delim == string::npos) break;
-            // length of the next string
-            size_t len = stoull(s.substr(i, delim - i));
-            i = delim + 1; // move past ':'
-            // extract the string of length 'len'
+            // Find the delimiter that ends the length field.
+            size_t slashPos = i;
+            while (slashPos < n && s[slashPos] != '/') ++slashPos;
+            // Convert the length substring to an integer.
+            int len = std::stoi(s.substr(i, slashPos - i));
+            // Move index past the delimiter.
+            i = slashPos + 1;
+            // Extract the original string of length 'len'.
             result.emplace_back(s.substr(i, len));
-            i += len; // move to the start of the next length field
+            // Advance i to the start of the next encoded block.
+            i += len;
         }
         return result;
     }
