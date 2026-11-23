@@ -7,26 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string by prefixing it with its length and a delimiter that never appears in the length representation. During decoding we read the length, skip the delimiter, and extract exactly that many characters. This makes the process linear and immune to any characters inside the original strings.
+ * Encode each string with its length followed by a special separator (e.g., ‘#’). Knowing the length lets us read the exact number of characters for every original string, so any character (including ‘#’) inside the string is safely handled.
  *
  * --- Approach ---
  * 1. **Encode**
  * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a special delimiter (e.g., `'#'`), then `s` itself to the result string.
- * * Return the concatenated result.
+ * * For each string `t`, append `to_string(t.size())`, then a delimiter `'#'`, then the string itself to the result.
+ * * The final concatenated string is returned.
  * 
  * 2. **Decode**
- * * Scan the encoded string `s` from left to right.
- * * Read characters until the delimiter `'#'` is found – this substring is the length `len`.
+ * * Scan the encoded string from left to right.
+ * * Read characters until the delimiter `'#'` to obtain the length `len`.
  * * Convert `len` to an integer, then take the next `len` characters as the original string.
- * * Append the extracted string to the answer vector and continue from the position after those `len` characters.
- * * Stop when the whole encoded string has been processed.
+ * * Append the recovered string to the answer vector and continue until the whole encoded string is processed.
  * 
- * Both operations touch each character exactly once, giving linear time.
+ * Both operations run in linear time with respect to the total number of characters.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters in all strings combined (including the added length fields).
- * Space Complexity: O(N) for the output of encode and for the vector returned by decode (the algorithm itself uses only O(1) auxiliary space).
+ * Time Complexity:  O(total_chars) – each character is visited a constant number of times during encoding and decoding.
+ * Space Complexity: O(total_chars) – the encoded string and the output vector together store all characters.
  */
 
 #include <iostream>
@@ -48,10 +47,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 10); // rough reservation
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                           [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '#';          // delimiter that never appears in the length
+            encoded += '#';          // delimiter that separates length from data
             encoded += s;
         }
         return encoded;
@@ -60,18 +62,23 @@ public:
     // Decodes a single string to a list of strings.
     vector<string> decode(const string& s) {
         vector<string> result;
-        size_t i = 0;
-        while (i < s.size()) {
-            // find delimiter '#'
-            size_t delimPos = s.find('#', i);
-            // safety check – malformed input would break here
-            if (delimPos == string::npos) break;
-            // length substring
-            size_t len = stoull(s.substr(i, delimPos - i));
-            // start of actual string
-            size_t start = delimPos + 1;
-            result.emplace_back(s.substr(start, len));
-            i = start + len;
+        size_t i = 0, n = s.size();
+
+        while (i < n) {
+            // read length
+            size_t j = i;
+            while (j < n && s[j] != '#') ++j;
+            // safety: malformed input (should not happen in LeetCode tests)
+            if (j == n) break;
+
+            long long len = 0;
+            for (size_t k = i; k < j; ++k) {
+                len = len * 10 + (s[k] - '0');
+            }
+
+            i = j + 1; // skip '#'
+            result.emplace_back(s.substr(i, (size_t)len));
+            i += (size_t)len;
         }
         return result;
     }
