@@ -7,24 +7,28 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string with its length so that the decoder knows exactly where a string ends, regardless of the characters it contains. A simple “length + delimiter + string” format lets us reconstruct the original list in one linear pass.
+ * Encode each string by prefixing its length and a special separator (e.g., ‘/’). Because the length is written in decimal, the separator never appears inside the numeric prefix, guaranteeing an unambiguous boundary. Decoding simply reads the length, skips the separator, and extracts that many characters.
  *
  * --- Approach ---
  * 1. **Encode**
- * * For every string `str` in the input vector, append `str.size()` followed by a special delimiter (e.g., `':'`) and then the string itself to a result `std::string`.
- * * Concatenating all such blocks yields the encoded representation.
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'/'`, then `s` itself to the result string.
+ * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Read characters until the delimiter `':'` to obtain the length `len` of the next original string.
- * * Extract the next `len` characters as the original string and push it into the answer vector.
- * * Continue until the whole encoded string is consumed.
+ * * For each segment, read characters until the delimiter `'/'` to obtain the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string.
+ * * Append the extracted string to the output vector and continue until the end of the encoded string.
  * 
- * 3. The delimiter `':'` is safe because the length field consists only of digits; any character (including `':'`) can appear inside the actual string part without ambiguity.
+ * 3. **Edge Cases**
+ * * Empty input vector → encode returns empty string; decode of empty string returns empty vector.
+ * * Strings that are empty (`""`) are encoded as `"0/"` and correctly decoded.
+ * * All possible characters (including digits and the delimiter) are safely handled because the delimiter is only examined **outside** the length field.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields).
- * Space Complexity: O(N) for the encoded string and the output vector during decoding.
+ * Time Complexity:  O(total length of all strings) for both encode and decode.
+ * Space Complexity: O(total length of all strings) for the encoded string and the decoded vector.
  */
 
 #include <iostream>
@@ -46,10 +50,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve(strs.size() * 10); // rough reservation
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size() * 5 ); // rough reservation
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += ':';               // delimiter between length and content
+            encoded += '/';
             encoded += s;
         }
         return encoded;
@@ -59,14 +66,16 @@ public:
     vector<string> decode(const string& s) {
         vector<string> result;
         size_t i = 0, n = s.size();
+
         while (i < n) {
             // read length
             size_t j = i;
-            while (j < n && s[j] != ':') ++j;
-            // safety: malformed input (should not happen in LeetCode tests)
-            if (j == n) break;
-            size_t len = stoull(s.substr(i, j - i));
-            i = j + 1; // skip ':'
+            while (j < n && s[j] != '/') ++j;
+            // j now points to the delimiter
+            string lenStr = s.substr(i, j - i);
+            size_t len = stoull(lenStr);   // safe for large lengths
+            i = j + 1;                      // skip delimiter
+
             // extract the string of length 'len'
             result.emplace_back(s.substr(i, len));
             i += len;
