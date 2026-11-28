@@ -7,28 +7,25 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each string with its length followed by a special separator.
- * Because the length is numeric, the separator can never be confused with the data, allowing us to decode by reading the length first and then extracting exactly that many characters.
+ * Encode each string by prefixing its length and a special separator (e.g., ‘/’). Because the length tells us exactly where a string ends, the original content can contain any character (including the separator) without ambiguity. Decoding just reads the length, skips the separator, and extracts that many characters repeatedly.
  *
  * --- Approach ---
  * 1. **Encode**
- * * For every string `s` in the input vector, append `to_string(s.size())`, a delimiter (chosen as '`/`'), and the string itself to the result.
+ * * Iterate over the input vector `strs`.
+ * * For each string `s`, append `to_string(s.size())`, then a delimiter `'/'`, then `s` itself to the result string.
  * * The final concatenated string is returned.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * Locate the next delimiter '`/`' to obtain the length substring, convert it to an integer (`len`).
- * * The next `len` characters form the original string; store it in the answer vector.
- * * Move the cursor past the processed part and repeat until the whole encoded string is consumed.
+ * * For each segment, read characters until the delimiter `'/'` to obtain the length `len`.
+ * * Convert `len` to an integer, then take the next `len` characters as the original string.
+ * * Append the recovered string to the output vector and continue until the whole encoded string is processed.
  * 
- * 3. **Edge Cases**
- * * Empty input vector → empty encoded string.
- * * Empty string element (`""`) → encoded as `"0/"` and correctly decoded back to `""`.
- * * Very long strings → use `size_t`/`unsigned long long` for length to avoid overflow.
+ * Both operations run in linear time with respect to the total number of characters in all strings.
  *
  * --- Complexity ---
- * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the output string (encoding) or the output vector (decoding); auxiliary space is O(1).
+ * Time Complexity:  O(N) where N is the total number of characters across all strings (including the added length fields and delimiters).
+ * Space Complexity: O(N) for the encoded string and the vector produced by decoding (the algorithm uses only a few extra variables).
  */
 
 #include <iostream>
@@ -50,14 +47,13 @@ public:
     // Encodes a list of strings to a single string.
     string encode(const vector<string>& strs) {
         string encoded;
-        encoded.reserve( // reserve a reasonable amount to avoid many reallocations
-            accumulate(strs.begin(), strs.end(), 0ULL,
-                       [](unsigned long long sum, const string& s) {
-                           return sum + s.size() + 20; // extra for length and delimiter
-                       }));
+        encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
+                                            [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reserve
+
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += '/';          // delimiter that never appears in the length part
+            encoded += '/';          // delimiter that never appears in the length field
             encoded += s;
         }
         return encoded;
@@ -67,14 +63,19 @@ public:
     vector<string> decode(const string& s) {
         vector<string> result;
         size_t i = 0, n = s.size();
+
         while (i < n) {
-            // find delimiter '/'
+            // read length
             size_t slashPos = s.find('/', i);
-            // It is guaranteed to exist in a valid encoding
-            unsigned long long len = stoull(s.substr(i, slashPos - i));
-            i = slashPos + 1;                 // move past the delimiter
-            result.emplace_back(s.substr(i, static_cast<size_t>(len)));
-            i += static_cast<size_t>(len);    // skip the extracted string
+            // safety check – malformed input should not happen in LeetCode tests
+            if (slashPos == string::npos) break;
+
+            size_t len = stoull(s.substr(i, slashPos - i));
+            i = slashPos + 1; // move past '/'
+
+            // extract the original string of length 'len'
+            result.emplace_back(s.substr(i, len));
+            i += len;
         }
         return result;
     }
