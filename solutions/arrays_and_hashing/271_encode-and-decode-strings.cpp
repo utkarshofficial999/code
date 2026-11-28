@@ -7,27 +7,27 @@
  * Status: Submission Failed (HTTP 403) (Runtime: N/A, Memory: N/A)
  *
  * --- Intuition ---
- * Encode each original string by prefixing it with its length and a special separator (e.g., ‘:’). Because the length tells us exactly where a string ends, the separator can appear inside the string without ambiguity. Decoding simply reads the length, skips the separator, and extracts that many characters.
+ * Encode each original string as `<length>/<string>` and concatenate them.
+ * During decoding we can read the length up to the separator, then extract exactly that many characters – no character in the original data can break the parsing because the length tells us where the string ends.
  *
  * --- Approach ---
  * 1. **Encode**
- * * Iterate over the input vector `strs`.
- * * For each string `s`, append `to_string(s.size())`, then a delimiter `':'`, then `s` itself to the result string.
+ * * For every string `str` in the input vector, compute its length `len`.
+ * * Append `len`, a special separator `'/'`, and the string itself to a result `std::string`.
  * * Return the concatenated result.
  * 
  * 2. **Decode**
  * * Scan the encoded string from left to right.
- * * For each token, read characters until the delimiter `':'` to obtain the length `len`.
- * * Convert `len` to an integer, then take the next `len` characters as the original string.
- * * Append the extracted string to the answer vector and continue until the whole encoded string is processed.
+ * * Locate the next separator `'/'` to obtain the length of the next original string.
+ * * Convert the substring before `'/'` to an integer `len`.
+ * * Take the following `len` characters as the original string, push it into the answer vector, and move the cursor past them.
+ * * Repeat until the whole encoded string is consumed.
  * 
- * 3. **Correctness Guarantees**
- * * The delimiter is placed **after** the length, never inside the length field, so it can never be confused with characters belonging to the original strings.
- * * Using the exact length eliminates any dependence on the content of the original strings, handling empty strings, strings containing digits, colons, or any other ASCII/Unicode characters.
+ * 3. The separator `'/'` is safe because it never appears inside the length field (which consists only of digits). The actual data may contain `'/'`, but it is never interpreted as a delimiter because we always know the exact length of the data segment.
  *
  * --- Complexity ---
  * Time Complexity:  O(N) where N is the total number of characters across all strings (both encoding and decoding scan each character once).
- * Space Complexity: O(N) for the output string in encode and for the resulting vector in decode.
+ * Space Complexity: O(N) for the output of encode and for the vector returned by decode.
  */
 
 #include <iostream>
@@ -50,13 +50,13 @@ public:
     string encode(const vector<string>& strs) {
         string encoded;
         encoded.reserve( (size_t)accumulate(strs.begin(), strs.end(), 0LL,
-                                            [](long long sum, const string& s){ return sum + s.size(); })
-                         + strs.size() * 5 ); // rough reservation
+                                           [](long long sum, const string& s){ return sum + s.size(); })
+                         + strs.size()*5 ); // rough reservation
 
         for (const string& s : strs) {
             encoded += to_string(s.size());
-            encoded += ':';               // delimiter separating length and content
-            encoded += s;
+            encoded += '/';               // separator between length and data
+            encoded += s;                 // the actual string (may contain '/')
         }
         return encoded;
     }
@@ -67,16 +67,15 @@ public:
         size_t i = 0, n = s.size();
 
         while (i < n) {
-            // read length
-            size_t j = i;
-            while (j < n && s[j] != ':') ++j;
-            // j now points to the delimiter; substring [i, j) is the length
-            size_t len = stoull(s.substr(i, j - i));
-            i = j + 1; // move past ':'
+            // find the separator that ends the length field
+            size_t slashPos = s.find('/', i);
+            // The problem guarantees a valid encoding, so slashPos must be found
+            size_t len = stoull(s.substr(i, slashPos - i));
+            i = slashPos + 1;                     // move past '/'
 
-            // extract the string of length 'len'
+            // extract the original string of length 'len'
             result.emplace_back(s.substr(i, len));
-            i += len; // move to the start of the next length field
+            i += len;                             // move to the start of next length field
         }
         return result;
     }
